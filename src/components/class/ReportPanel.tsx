@@ -38,6 +38,7 @@ export default function ReportPanel({ student, onGoMemo }: { student: Student; o
           <div className="text-center">
             <p className="text-[11px] font-bold text-slate-400">월말 학부모 리포트</p>
             <p className="text-lg font-extrabold text-slate-900">{monthLabel(baseMonth)}</p>
+            <p className="mt-0.5 text-[10.5px] font-semibold text-slate-400">메모·작품이 바뀌면 자동으로 다시 만들어져요</p>
           </div>
           <button
             onClick={() => setBaseMonth((m) => shiftMonth(m, 1))}
