@@ -6,7 +6,7 @@ import { TRACK_LIST, type Track } from '../../lib/curriculum';
 import { parseMindCode } from '../../lib/mind';
 import { cn } from '../../lib/util';
 import { Button, Modal, useToast } from '../../components/ui';
-import type { CodingLevel } from '../../types';
+import type { CodingLevel, Subject } from '../../types';
 import MindPanel from '../../components/class/MindPanel';
 import MemoPanel from '../../components/class/MemoPanel';
 import ReportPanel from '../../components/class/ReportPanel';
@@ -129,6 +129,17 @@ export default function AdminClassPage() {
                       ) : (
                         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-400">기질 코드 없음</span>
                       )}
+                      <span
+                        className={cn(
+                          'rounded-full px-2.5 py-1 text-[11px] font-bold',
+                          student.enabled_subjects.includes('english')
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-slate-100 text-slate-400'
+                        )}
+                        data-testid="student-tosel-badge"
+                      >
+                        📚 TOSEL 영어 {student.enabled_subjects.includes('english') ? 'ON' : 'OFF'}
+                      </span>
                     </>
                   );
                 })()}
@@ -213,7 +224,7 @@ function StudentModals({
   closeAdd: () => void;
   editOpen: boolean;
   closeEdit: () => void;
-  student: { id: string; name: string; grade: number; coding_level: string } | null;
+  student: { id: string; name: string; grade: number; coding_level: string; enabled_subjects: Subject[] } | null;
   onCreated: (id: string) => void;
   onGoTools: () => void;
 }) {
@@ -222,14 +233,20 @@ function StudentModals({
   const toast = useToast();
   const [issuedPin, setIssuedPin] = useState<{ name: string; pin: string } | null>(null);
 
-  const [addForm, setAddForm] = useState({ name: '', grade: 3, track: 'scratch' as Track, code: '' });
-  const [editForm, setEditForm] = useState({ name: '', grade: 3, track: 'scratch' as Track, code: '' });
+  const [addForm, setAddForm] = useState({ name: '', grade: 3, track: 'scratch' as Track, code: '', tosel: false });
+  const [editForm, setEditForm] = useState({ name: '', grade: 3, track: 'scratch' as Track, code: '', tosel: false });
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!student) return;
     const p = cls.profile(student.id, student.coding_level);
-    setEditForm({ name: student.name, grade: student.grade, track: p.track, code: p.code });
+    setEditForm({
+      name: student.name,
+      grade: student.grade,
+      track: p.track,
+      code: p.code,
+      tosel: student.enabled_subjects.includes('english'),
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.id, editOpen]);
 
@@ -255,7 +272,8 @@ function StudentModals({
         nickname: addForm.name,
         level: 1,
         coding_level: codingLevel as CodingLevel,
-        enabled_subjects: ['english', 'coding'],
+        // 기본은 코딩만 — TOSEL 영어 학습을 켠 학생만 📚 영어 토글이 보입니다
+        enabled_subjects: addForm.tosel ? ['coding', 'english'] : ['coding'],
       });
       cls.setProfile(res.student.id, {
         track: addForm.track,
@@ -263,7 +281,7 @@ function StudentModals({
       });
       setIssuedPin({ name: res.student.name, pin: res.pin });
       closeAdd();
-      setAddForm({ name: '', grade: 3, track: 'scratch', code: '' });
+      setAddForm({ name: '', grade: 3, track: 'scratch', code: '', tosel: false });
       onCreated(res.student.id);
     } catch (err) {
       toast(err instanceof Error ? err.message : '학생 등록에 실패했어요', 'err');
@@ -283,6 +301,7 @@ function StudentModals({
       return;
     }
     store.updateStudentBasic(student.id, { name: editForm.name, grade: Number(editForm.grade) });
+    store.setStudentSubjects(student.id, editForm.tosel ? ['coding', 'english'] : ['coding']);
     cls.setProfile(student.id, { track: editForm.track, code: editForm.code.trim().toUpperCase() });
     toast('학생 정보를 저장했어요');
     closeEdit();
@@ -343,6 +362,34 @@ function StudentModals({
               ))}
             </select>
           </label>
+          <button
+            type="button"
+            data-testid="student-add-tosel"
+            onClick={() => setAddForm({ ...addForm, tosel: !addForm.tosel })}
+            className={cn(
+              'flex w-full items-center justify-between gap-3 rounded-2xl border px-3.5 py-3 text-left transition',
+              addForm.tosel ? 'border-brand-200 bg-brand-50' : 'border-slate-200 bg-white'
+            )}
+          >
+            <span>
+              <span className="block text-[13px] font-bold text-slate-700">📚 TOSEL 영어 학습도 함께 쓰기</span>
+              <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">
+                기본은 코딩만이에요. 영어 단어 학습을 같이 하는 학생만 켜 주세요.
+              </span>
+            </span>
+            <span
+              className={cn('relative h-6 w-11 shrink-0 rounded-full transition', addForm.tosel ? 'bg-brand-600' : 'bg-slate-200')}
+              aria-hidden
+            >
+              <span
+                className={cn(
+                  'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all',
+                  addForm.tosel ? 'left-[22px]' : 'left-0.5'
+                )}
+              />
+            </span>
+          </button>
+
           <label className="block">
             <span className="text-xs font-bold text-slate-500">기질 코드 RC-XXXX (선택)</span>
             <input
@@ -354,7 +401,7 @@ function StudentModals({
             {!addCodeOk ? <span className="mt-1 block text-[11px] font-semibold text-rose-500">형식을 확인해 주세요 (예: RC-14E1)</span> : null}
           </label>
           <p className="text-[11px] leading-relaxed text-slate-400">
-            등록하면 학생 PIN이 발급됩니다. 단어장·코딩 레벨은 ‘관리 도구’에서 더 자세히 설정할 수 있어요.
+            등록하면 학생 PIN이 발급됩니다. 영어 레벨·코딩 레벨은 ‘관리 도구’에서 더 자세히 설정할 수 있어요.
             <button onClick={onGoTools} className="ml-2 font-bold text-brand-600 underline">
               관리 도구 열기
             </button>
@@ -414,6 +461,36 @@ function StudentModals({
               ))}
             </select>
           </label>
+          <button
+            type="button"
+            data-testid="student-edit-tosel"
+            onClick={() => setEditForm({ ...editForm, tosel: !editForm.tosel })}
+            className={cn(
+              'flex w-full items-center justify-between gap-3 rounded-2xl border px-3.5 py-3 text-left transition',
+              editForm.tosel ? 'border-brand-200 bg-brand-50' : 'border-slate-200 bg-white'
+            )}
+          >
+            <span>
+              <span className="block text-[13px] font-bold text-slate-700">📚 TOSEL 영어 학습 사용</span>
+              <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">
+                {editForm.tosel
+                  ? '학생 화면 위에 📚 영어 / 💻 코딩 전환이 보입니다 (첫 화면은 코딩).'
+                  : '코딩 화면만 보입니다. 켜면 영어 단어 학습과 영어 게임이 함께 열려요.'}
+              </span>
+            </span>
+            <span
+              className={cn('relative h-6 w-11 shrink-0 rounded-full transition', editForm.tosel ? 'bg-brand-600' : 'bg-slate-200')}
+              aria-hidden
+            >
+              <span
+                className={cn(
+                  'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all',
+                  editForm.tosel ? 'left-[22px]' : 'left-0.5'
+                )}
+              />
+            </span>
+          </button>
+
           <label className="block">
             <span className="text-xs font-bold text-slate-500">기질 코드 RC-XXXX</span>
             <input

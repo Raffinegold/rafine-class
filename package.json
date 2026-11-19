@@ -9,7 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "postbuild": "node scripts/copy-404.mjs",
     "preview": "vite preview --port 4173",
-    "qa": "node qa/capture.mjs",
+    "qa": "node qa/qa-class.mjs",
+    "qa:v2": "node qa/qa-class-v2.mjs",
     "qa:games": "node qa/games10.mjs"
   },
   "dependencies": {

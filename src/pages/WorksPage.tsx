@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSession } from '../app-context';
 import { useClassStore } from '../lib/classStore';
 import { TRACK_META, TRACK_LIST } from '../lib/curriculum';
+import { fileToCompressedPhoto, photoSizeKb } from '../lib/photo';
 import { todayStr } from '../lib/util';
 import { Button, Card, Modal, useToast } from '../components/ui';
 import StudentHeader from '../components/StudentHeader';
@@ -21,6 +22,8 @@ export default function WorksPage() {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ title: '', date: todayStr(), tool: '', comment: '', link: '' });
+  const [photo, setPhoto] = useState<{ dataUrl: string; kb: number; name: string } | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   const profile = student ? cls.profile(student.id, student.coding_level) : null;
   const works = student ? cls.worksFor(student.id) : [];
@@ -39,7 +42,22 @@ export default function WorksPage() {
       comment: '',
       link: '',
     });
+    setPhoto(null);
     setOpen(true);
+  };
+
+  /** 사진 1장: 브라우저 캔버스로 가로 800px JPEG로 줄여 data URL 로 담아 둡니다 */
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      const dataUrl = await fileToCompressedPhoto(file);
+      setPhoto({ dataUrl, kb: photoSizeKb(dataUrl), name: file.name });
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '사진을 불러오지 못했어요', 'err');
+    } finally {
+      setPhotoBusy(false);
+    }
   };
 
   const save = () => {
@@ -54,9 +72,10 @@ export default function WorksPage() {
       tool: form.tool || TRACK_META[profile.track].label,
       comment: form.comment,
       link: form.link,
+      photo: photo?.dataUrl,
     });
     setOpen(false);
-    toast('작품을 보관함에 담았어요 🎨');
+    toast(photo ? '사진과 함께 작품을 담았어요 🎨' : '작품을 보관함에 담았어요 🎨');
   };
 
   return (
@@ -95,7 +114,16 @@ export default function WorksPage() {
             </Card>
           ) : (
             works.map((w) => (
-              <Card key={w.id} className="space-y-2" data-testid={`work-${w.id}`}>
+              <Card key={w.id} className="space-y-2 overflow-hidden" data-testid={`work-${w.id}`}>
+                {w.photo ? (
+                  <img
+                    src={w.photo}
+                    alt={`${w.title} 작품 사진`}
+                    data-testid={`work-photo-${w.id}`}
+                    className="-mx-5 -mt-5 mb-1 aspect-[4/3] w-[calc(100%+2.5rem)] max-w-none object-cover"
+                    loading="lazy"
+                  />
+                ) : null}
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[17px] font-extrabold leading-snug text-slate-900">{w.title}</p>
@@ -133,7 +161,7 @@ export default function WorksPage() {
         </div>
 
         <p className="mt-6 text-center text-[11px] leading-relaxed text-slate-400">
-          작품은 이 기기에 저장돼요. 선생님 화면의 작품 보관함과 월말 리포트에 함께 보입니다.
+          작품은 이 기기에 저장돼요. 사진은 가로 800px JPEG로 줄여서 보관해요. 선생님 화면의 작품 보관함과 월말 리포트에 함께 보입니다.
         </p>
       </main>
 
@@ -153,6 +181,47 @@ export default function WorksPage() {
         }
       >
         <div className="space-y-4">
+          <div>
+            <span className="text-xs font-bold text-slate-500">작품 사진 1장 (선택)</span>
+            {photo ? (
+              <div className="mt-1.5 overflow-hidden rounded-2xl border border-slate-200" data-testid="work-photo-preview">
+                <img src={photo.dataUrl} alt="작품 사진 미리보기" className="aspect-[4/3] w-full object-cover" />
+                <div className="flex items-center justify-between gap-2 bg-white px-3 py-2">
+                  <span className="min-w-0 truncate text-[11px] font-semibold text-slate-500">
+                    {photo.name} · {photo.kb}KB로 줄여 저장해요
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPhoto(null)}
+                    data-testid="work-photo-remove"
+                    className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-bold text-rose-500 hover:bg-rose-50"
+                  >
+                    사진 빼기
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label className="mt-1.5 flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-3 py-4 text-[12px] font-semibold text-slate-500 hover:bg-slate-50">
+                <span className="text-lg">📷</span>
+                {photoBusy ? '사진을 줄이는 중…' : '사진 올리기 (휴대폰 앨범 · PC 파일)'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  data-testid="work-photo-input"
+                  className="hidden"
+                  disabled={photoBusy}
+                  onChange={(e) => {
+                    void pickPhoto(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            )}
+            <p className="mt-1 text-[10.5px] leading-relaxed text-slate-400">
+              가로 800px JPEG로 자동으로 줄여서 저장해요. 작품 보관함 카드와 월말 리포트 ‘이번 달 만든 작품’에 함께 나옵니다.
+            </p>
+          </div>
+
           <label className="block">
             <span className="text-xs font-bold text-slate-500">작품 제목</span>
             <input

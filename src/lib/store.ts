@@ -175,12 +175,12 @@ class VocaStore {
     if (!this.settings || typeof this.settings.cash_daily_limit !== 'number') {
       this.settings = { cash_daily_limit: DEFAULT_CASH_DAILY_LIMIT };
     }
-    // 코딩 확장 이전 저장본: 수강 과목이 없으면 영어+코딩 둘 다 열린 상태로, 코딩 레벨은 C1로 채웁니다
+    // 수강 과목이 비어 있는 예전 저장본은 코딩 학원 기본값(코딩만)으로 채웁니다
     this.students = this.students.map((s) => ({
       ...s,
       coding_level: s.coding_level ?? 'C1',
       enabled_subjects:
-        Array.isArray(s.enabled_subjects) && s.enabled_subjects.length ? s.enabled_subjects : ['english', 'coding'],
+        Array.isArray(s.enabled_subjects) && s.enabled_subjects.length ? s.enabled_subjects : ['coding'],
     }));
     if (!this.shopItems.length) {
       this.shopItems = SEED_SHOP_ITEMS.map((i) => ({ ...i }));
@@ -537,7 +537,7 @@ class VocaStore {
       created_at: new Date().toISOString(),
       last_seen_at: null,
       coding_level: input.coding_level ?? 'C1',
-      enabled_subjects: input.enabled_subjects ?? ['english', 'coding'],
+      enabled_subjects: input.enabled_subjects ?? ['coding'],
     };
 
     if (this.mode === 'supabase' && this.client) {
@@ -671,8 +671,8 @@ class VocaStore {
   setStudentSubjects(studentId: string, subjects: Subject[]) {
     const st = this.getStudent(studentId);
     if (!st) return;
-    const clean: Subject[] = (['english', 'coding'] as Subject[]).filter((s) => subjects.includes(s));
-    const next = clean.length ? clean : (['english'] as Subject[]);
+    const clean: Subject[] = (['coding', 'english'] as Subject[]).filter((s) => subjects.includes(s));
+    const next = clean.length ? clean : (['coding'] as Subject[]);
     if (st.enabled_subjects.length === next.length && st.enabled_subjects.every((s, i) => s === next[i])) return;
     st.enabled_subjects = next;
     if (this.mode === 'supabase' && this.client) {

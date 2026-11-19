@@ -5,9 +5,11 @@ import StudentNav from '../components/StudentNav';
 import StudentHeader from '../components/StudentHeader';
 import { Badge, Bar, Button, Card, SectionTitle } from '../components/ui';
 import { buildCodingMission, buildCodingReview, CODING_GAME_LIST, CODING_GAME_META, shuffleChoices, type CodingMissionItem } from '../lib/coding';
+import { useClassStore } from '../lib/classStore';
+import { CURRICULUM, TRACK_META } from '../lib/curriculum';
 import { problemById } from '../data/codingSeed';
 import { sfx } from '../lib/sound';
-import { cn, pct, weekStartStr, ymd } from '../lib/util';
+import { cn, nameWithSubject, pct, weekStartStr, ymd } from '../lib/util';
 import { CODING_LEVELS, CODING_LEVEL_META, CODING_KIND_META, type CodingGameKey, type CodingProblem, type Student } from '../types';
 
 type Tab = 'today' | 'wrong';
@@ -18,6 +20,7 @@ type Tab = 'today' | 'wrong';
  */
 export default function CodingHome() {
   const store = useVocaStore();
+  const cls = useClassStore();
   const navigate = useNavigate();
   const { student, logout } = useSession();
   const [params] = useSearchParams();
@@ -38,6 +41,17 @@ export default function CodingHome() {
   const weekStart = weekStartStr();
   const weekLogs = store.codingLogsFor(student.id).filter((l) => ymd(new Date(l.answered_at)) >= weekStart);
   const weekCorrect = weekLogs.filter((l) => l.is_correct).length;
+
+  /* ---- 내 24주 진도 · 작품 보관함 (원장님이 체크한 진도를 학생이 그대로 봅니다) ---- */
+  const profile = cls.profile(student.id, student.coding_level);
+  const trackMeta = TRACK_META[profile.track];
+  const plan = CURRICULUM[profile.track];
+  const doneWeeks = cls.doneWeeks(student.id);
+  const donePct = Math.round((doneWeeks.length / 24) * 100);
+  const nextWeek = cls.nextWeek(student.id);
+  const thisWeek = plan.find((w) => w.week === nextWeek);
+  const works = cls.worksFor(student.id).filter((w) => !!w.photo);
+  const workCount = cls.worksFor(student.id).length;
 
   const startMission = (items: CodingMissionItem[], mode: 'mission' | 'review') => {
     if (!items.length) return;
@@ -97,9 +111,10 @@ export default function CodingHome() {
             </div>
 
             {tab === 'today' ? (
-              <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="space-y-3">
+                {/* ------------------------------ 오늘의 코딩 미션 ------------------------------ */}
                 <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-950 p-5 text-white shadow-card">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold text-white/70">오늘의 코딩 미션</p>
                       <p className="mt-1 text-2xl font-extrabold">{todayMission.target}문제</p>
@@ -109,7 +124,7 @@ export default function CodingHome() {
                         {todayMission.reviewCount > 0 ? ` · 오답 복습 ${todayMission.reviewCount}` : ''}
                       </p>
                     </div>
-                    <div className="grid h-16 w-16 place-items-center rounded-2xl bg-white/10 text-3xl">🖥️</div>
+                    <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/10 text-2xl">🖥️</div>
                   </div>
 
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -150,56 +165,153 @@ export default function CodingHome() {
                   </div>
                 </section>
 
-                <div className="space-y-4">
-                  <Card>
-                    <SectionTitle sub="원장님이 배정한 코딩 레벨이에요">나의 코딩 길</SectionTitle>
-                    <ul className="mt-3 space-y-1.5">
-                      {CODING_LEVELS.map((lv) => {
-                        const active = lv === level;
-                        return (
-                          <li
-                            key={lv}
-                            data-testid={`coding-level-${lv}`}
-                            className={cn(
-                              'flex items-center gap-2 rounded-xl px-3 py-2 text-xs',
-                              active ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-500'
-                            )}
-                          >
-                            <span className="font-bold">{CODING_LEVEL_META[lv].short}</span>
-                            <span className={cn('flex-1 truncate', active ? 'text-white/85' : 'text-slate-500')}>
-                              {CODING_LEVEL_META[lv].desc}
-                            </span>
-                            {active ? <span className="text-[10px] font-bold text-sunny">지금</span> : null}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-                      레벨은 원장님이 관리자 화면에서 바꿔 줄 수 있어요. 문제를 다 풀면 다음 레벨로 올라가요.
-                    </p>
-                  </Card>
+                {/* ------------------------------ 오늘의 24주 진도 ------------------------------ */}
+                <section
+                  data-testid="coding-week-card"
+                  className="rounded-3xl border border-white bg-white p-4 shadow-soft"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-extrabold text-brand-600">
+                        오늘의 24주 진도 · {trackMeta.emoji} {trackMeta.label}
+                      </p>
+                      <p className="mt-1 text-[15px] font-extrabold leading-snug text-slate-900" data-testid="coding-week-title">
+                        {thisWeek ? `${thisWeek.week}주차 · ${thisWeek.title}` : '24주를 모두 마쳤어요 🎉'}
+                      </p>
+                      <p className="mt-0.5 text-[12px] leading-relaxed text-slate-500">
+                        {thisWeek ? thisWeek.goal : '다음 24주 목표를 선생님과 함께 정해 보세요.'}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-xl font-extrabold text-slate-900">
+                        {doneWeeks.length}
+                        <span className="ml-0.5 text-[11px] font-bold text-slate-400">/24주</span>
+                      </p>
+                      <p className="text-[11px] font-bold text-brand-600">{donePct}%</p>
+                    </div>
+                  </div>
 
-                  <Card>
-                    <SectionTitle sub="캐시는 영어·코딩이 함께 써요">코딩 게임</SectionTitle>
-                    <ul className="mt-3 space-y-1.5">
-                      {CODING_GAME_LIST.map((key) => (
-                        <li key={key} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
-                          <span className="text-base">{CODING_GAME_META[key].icon}</span>
-                          <span className="flex-1 text-xs font-semibold text-slate-600">{CODING_GAME_META[key].label}</span>
-                          <button
-                            onClick={() => navigate(`/game?g=${key}`)}
-                            className="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-slate-700 ring-1 ring-slate-200"
-                          >
-                            플레이
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
-                      오늘 적립 {store.todayCashEarned(student.id)} / {store.cashDailyLimit()}원 · 남은 금액은 영어 게임과 나눠 써요.
-                    </p>
-                  </Card>
+                  <div className="mt-3">
+                    <Bar ratio={doneWeeks.length / 24} tone="mint" />
+                  </div>
+                  <div className="mt-2 flex items-center gap-[3px]" aria-hidden>
+                    {Array.from({ length: 24 }, (_, i) => i + 1).map((w) => {
+                      const isDone = doneWeeks.includes(w);
+                      return (
+                        <span
+                          key={w}
+                          className={cn(
+                            'h-1.5 flex-1 rounded-full',
+                            isDone ? 'bg-emerald-400' : w === nextWeek ? 'bg-brand-400' : 'bg-slate-100'
+                          )}
+                        />
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1.5 text-[10.5px] font-semibold text-slate-400">
+                    {doneWeeks.length}주 완료 · {thisWeek ? `이번 주는 ${thisWeek.week}주차예요` : '다음 목표를 정해요'}
+                  </p>
+
+                  <button
+                    onClick={() => navigate('/hints')}
+                    data-testid="coding-week-hint"
+                    className="mt-3 flex w-full items-center gap-2 rounded-2xl bg-amber-50 px-3 py-2.5 text-left transition active:scale-[0.99] hover:bg-amber-100/70"
+                  >
+                    <span className="text-lg">💡</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12px] font-extrabold text-amber-700">이번 주 핵심 힌트 바로가기</span>
+                      <span className="mt-0.5 block truncate text-[11px] text-amber-700/80">
+                        {nameWithSubject(student.name)} 지금 배우는 {thisWeek ? `${thisWeek.week}주차` : '다음'} 힌트 카드
+                      </span>
+                    </span>
+                    <span className="text-amber-500">›</span>
+                  </button>
+                </section>
+
+                {/* --------------------------- 복습 힌트 · 내 작품 바로가기 --------------------------- */}
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => navigate('/hints')}
+                    data-testid="coding-hints-tile"
+                    className="rounded-3xl border border-white bg-gradient-to-br from-amber-50 via-white to-white p-4 text-left shadow-soft transition active:scale-[0.99] hover:shadow-card"
+                  >
+                    <span className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-100 text-xl">💡</span>
+                    <span className="mt-2 block text-[14px] font-extrabold text-slate-900">복습 힌트</span>
+                    <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">집에서 막힐 때 보는 카드</span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/works')}
+                    data-testid="coding-works-tile"
+                    className="rounded-3xl border border-white bg-gradient-to-br from-brand-50 via-white to-white p-4 text-left shadow-soft transition active:scale-[0.99] hover:shadow-card"
+                  >
+                    {works[0] ? (
+                      <img
+                        src={works[0].photo}
+                        alt=""
+                        className="h-10 w-10 rounded-2xl object-cover ring-1 ring-white"
+                      />
+                    ) : (
+                      <span className="grid h-10 w-10 place-items-center rounded-2xl bg-brand-100 text-xl">🎨</span>
+                    )}
+                    <span className="mt-2 block text-[14px] font-extrabold text-slate-900">내 작품 {workCount}개</span>
+                    <span className="mt-0.5 block truncate text-[11px] leading-relaxed text-slate-500">
+                      {cls.worksFor(student.id)[0]?.title ?? '만든 것을 사진으로 남겨요'}
+                    </span>
+                  </button>
                 </div>
+
+                {/* ------------------------------ 코딩 5종 게임 ------------------------------ */}
+                <Card data-testid="coding-games-card">
+                  <SectionTitle sub="배운 걸 게임으로 한 판 · 캐시도 쌓여요">코딩 5종 게임</SectionTitle>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {CODING_GAME_LIST.map((key) => (
+                      <button
+                        key={key}
+                        onClick={() => navigate(`/game?g=${key}`)}
+                        data-testid={`coding-game-tile-${key}`}
+                        className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-left transition active:scale-[0.98] hover:bg-slate-100"
+                      >
+                        <span className="text-lg">{CODING_GAME_META[key].icon}</span>
+                        <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-slate-700">
+                          {CODING_GAME_META[key].label}
+                        </span>
+                        <span className="text-[11px] font-bold text-brand-600">▶</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+                    오늘 적립 {store.todayCashEarned(student.id)} / {store.cashDailyLimit()}원 · 남은 금액은 영어 학습과 나눠 써요.
+                  </p>
+                </Card>
+
+                {/* ------------------------------ 나의 코딩 길 ------------------------------ */}
+                <Card>
+                  <SectionTitle sub="원장님이 배정한 코딩 레벨이에요">나의 코딩 길</SectionTitle>
+                  <ul className="mt-3 space-y-1.5">
+                    {CODING_LEVELS.map((lv) => {
+                      const active = lv === level;
+                      return (
+                        <li
+                          key={lv}
+                          data-testid={`coding-level-${lv}`}
+                          className={cn(
+                            'flex items-center gap-2 rounded-xl px-3 py-2 text-xs',
+                            active ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-500'
+                          )}
+                        >
+                          <span className="font-bold">{CODING_LEVEL_META[lv].short}</span>
+                          <span className={cn('flex-1 truncate', active ? 'text-white/85' : 'text-slate-500')}>
+                            {CODING_LEVEL_META[lv].desc}
+                          </span>
+                          {active ? <span className="text-[10px] font-bold text-sunny">지금</span> : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+                    레벨은 원장님이 관리자 화면에서 바꿔 줄 수 있어요. 문제를 다 풀면 다음 레벨로 올라가요.
+                  </p>
+                </Card>
               </div>
             ) : (
               <section className="space-y-4">

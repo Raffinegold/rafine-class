@@ -3,12 +3,16 @@ import { useVocaStore } from './app-context';
 import type { Student, Subject } from './types';
 
 /**
- * 학생이 지금 보고 있는 과목 (📚 영어 / 💻 코딩).
- * - 원장님이 열어 준 과목(enabled_subjects) 안에서만 고를 수 있습니다.
+ * 학생이 지금 보고 있는 과목 (💻 코딩 / 📚 영어).
+ * - 라피네 클래스는 코딩 학원 앱이라 기본 첫 화면은 항상 💻 코딩입니다.
+ * - 원장님이 TOSEL 영어 학습을 켜 준 학생만 위쪽 전환 스위치가 보입니다.
  * - 한 과목만 열려 있으면 그 과목으로 고정되고 전환 스위치가 숨겨집니다.
  * - 고른 과목은 학생별로 브라우저에 기억됩니다.
  */
-const KEY_PREFIX = 'rafine-voca-subject-';
+const KEY_PREFIX = 'rafine-voca-subject-v2-';
+
+/** 원장님이 따로 열어 주지 않은 학생의 기본 과목 */
+export const DEFAULT_SUBJECT: Subject = 'coding';
 
 interface SubjectCtxValue {
   subject: Subject;
@@ -18,10 +22,10 @@ interface SubjectCtxValue {
 }
 
 const Ctx = createContext<SubjectCtxValue>({
-  subject: 'english',
+  subject: 'coding',
   setSubject: () => {},
-  allowed: ['english', 'coding'],
-  canSwitch: true,
+  allowed: ['coding'],
+  canSwitch: false,
 });
 
 function readStored(studentId?: string): Subject | null {
@@ -44,9 +48,10 @@ export function SubjectProvider({ student, children }: { student: Student | null
   }, [student?.id]);
 
   const allowed = useMemo<Subject[]>(() => {
-    const raw = student?.enabled_subjects ?? ['english', 'coding'];
-    const clean = (['english', 'coding'] as Subject[]).filter((s) => raw.includes(s));
-    return clean.length ? clean : ['english'];
+    const raw = student?.enabled_subjects ?? [DEFAULT_SUBJECT];
+    // 코딩을 먼저 두어, 아직 고르지 않은 학생은 항상 코딩 화면으로 들어갑니다
+    const clean = (['coding', 'english'] as Subject[]).filter((s) => raw.includes(s));
+    return clean.length ? clean : [DEFAULT_SUBJECT];
     // store.version 을 의존성에 두어 권한 변경이 즉시 반영되게 합니다
   }, [student, store.version]);
 

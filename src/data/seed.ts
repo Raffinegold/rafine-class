@@ -149,6 +149,7 @@ export const SEED_STUDENTS: Student[] = [
     active: true,
     created_at: '2026-11-02T09:00:00+09:00',
     last_seen_at: null,
+    // TOSEL 영어 학습을 함께 켠 학생 — 첫 화면은 그래도 코딩이고, 위쪽에 📚 영어 토글이 보입니다
     coding_level: 'C2',
     enabled_subjects: ['english', 'coding'],
   },
@@ -165,8 +166,9 @@ export const SEED_STUDENTS: Student[] = [
     active: true,
     created_at: '2026-11-02T09:10:00+09:00',
     last_seen_at: null,
+    // 코딩 중심 학생 — 영어 토글 없이 코딩 화면만 (원장님이 관리 도구에서 켤 수 있음)
     coding_level: 'C3',
-    enabled_subjects: ['english', 'coding'],
+    enabled_subjects: ['coding'],
   },
   {
     id: 'stu-haeun',
@@ -199,7 +201,7 @@ export const SEED_STUDENTS: Student[] = [
     created_at: '2026-11-04T11:00:00+09:00',
     last_seen_at: null,
     coding_level: 'C4',
-    enabled_subjects: ['english', 'coding'],
+    enabled_subjects: ['coding'],
   },
   {
     id: 'stu-yujin',

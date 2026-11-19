@@ -3,7 +3,7 @@
  * - 정답 코드를 통째로 주지 않습니다. 스스로 확인할 질문과 방향만 줍니다.
  * - 트랙(스크래치·파이썬·로블록스·유니티)별 핵심 개념 + "막힐 때 보는 힌트"
  */
-import type { Track } from './curriculum';
+import { CURRICULUM, type Track, type WeekPlan } from './curriculum';
 
 export interface Blocker {
   symptom: string;
@@ -278,3 +278,48 @@ export const REVIEW_CARDS: Partial<Record<Track, ConceptCard[]>> = {
     },
   ],
 };
+
+/* ---------------------------------------------------------------- */
+/* 24주 진도 ↔ 개념 카드 연결 (현재 주차 하이라이트)                  */
+/* ---------------------------------------------------------------- */
+
+/** 주차 제목·목표 문장에 나타나는 낱말로 그 주에 볼 개념 카드를 고릅니다 */
+const CARD_KEYWORDS: Record<string, string[]> = {
+  'sc-order': ['순서', '블록', '움직임', '10걸음', '모양', '소리', '이벤트', '깃발', '스프라이트', '무대', '좌표'],
+  'sc-loop': ['반복', '조건', '변수', '감지', '복제', '방송', '목록', '난이도', '버그', '점수', '충돌', '레벨', '스테이지'],
+  'py-indent': ['print', '화면', '들여쓰기', 'if', 'for', 'while', '입력', '오류', '조건', '반복'],
+  'py-var': ['변수', '자료형', '리스트', '딕셔너리', '함수', '문자열', '모듈', '클래스', '파일'],
+  'rb-part': ['파트', '스튜디오', '재질', '조명', '저장', '좌표', '카메라'],
+  'rb-script': ['스크립트', '이벤트', '함수', '변수', '점수', '터치', '충돌', '리더보드', '데이터', '사운드', '레벨'],
+  'un-script': ['스크립트', '씬', '오브젝트', '머티리얼', '프리팹', '입력', 'UI', '애니메이션', '카메라', '저장'],
+  'un-physics': ['물리', '충돌', 'Rigidbody', '체력', '적', '파티클', '점수', '스테이지', '빌드', '버그'],
+};
+
+export interface WeekHighlight {
+  /** 이번 주(다음에 배울) 주차 */
+  plan: WeekPlan;
+  /** 그 주에 함께 볼 개념 카드 (1~2장) */
+  cards: ConceptCard[];
+  /** 24주 중 완료한 주 수 */
+  doneCount: number;
+}
+
+/** 학생의 현재 진도(다음 주차)에 맞는 개념 카드를 골라 줍니다. */
+export function highlightForWeek(track: Track, week: number, doneCount = 0): WeekHighlight | null {
+  const plan = CURRICULUM[track]?.find((w) => w.week === week);
+  if (!plan) return null;
+  const pool = REVIEW_CARDS[track] ?? [];
+  const text = `${plan.title} ${plan.goal}`.toLowerCase();
+
+  const scored = pool
+    .map((card) => {
+      const keys = CARD_KEYWORDS[card.id] ?? [];
+      const score = keys.reduce((sum, k) => (text.includes(k.toLowerCase()) ? sum + 1 : sum), 0);
+      return { card, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const hits = scored.filter((s) => s.score > 0).slice(0, 2).map((s) => s.card);
+  const cards = hits.length ? hits : pool.slice(0, 1);
+  return { plan, cards, doneCount };
+}

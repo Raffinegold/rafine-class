@@ -12,7 +12,7 @@ interface NavItem {
 }
 
 const ITEMS: NavItem[] = [
-  { key: 'learn', label: '학습', icon: '📚', to: '/' },
+  { key: 'learn', label: '학습', icon: '💻', to: '/' },
   { key: 'works', label: '내 작품', icon: '🎨', to: '/works' },
   { key: 'hints', label: '복습 힌트', icon: '💡', to: '/hints' },
   { key: 'shop', label: '상점', icon: '🎁', to: '/shop' },

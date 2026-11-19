@@ -1,31 +1,28 @@
 import { useMemo, useState } from 'react';
 import { useSession, useVocaStore } from '../app-context';
-import { Badge, Bar, Button, Card, LevelPill, Modal, SectionTitle, useToast } from '../components/ui';
-import ParentReportCard from '../components/ParentReportCard';
+import { Badge, Button, Card, LevelPill, Modal, SectionTitle, useToast } from '../components/ui';
 import { parseWordCsv } from '../lib/csv';
-import { buildClassMessage, buildParentMessage, copyText, reportUrl } from '../lib/report';
-import { computeOverview, computeWeekStats } from '../lib/stats';
-import { LEVEL_META, LEVEL_TO_TOSEL, TOSEL_TO_LEVEL, CODING_LEVELS, CODING_LEVEL_META, type CodingLevel, type Level, type RedemptionRequest, type ShopItem, type Student, type Subject, type ToselLevel } from '../types';
-import { CODING_GAME_META } from '../lib/coding';
-import { cn, formatKoTimestamp, pct, todayStr, weekStartStr } from '../lib/util';
+import { copyText } from '../lib/report';
+import { LEVEL_META, CODING_LEVELS, CODING_LEVEL_META, type CodingLevel, type Level, type RedemptionRequest, type ShopItem, type Student, type Subject } from '../types';
+import { cn, formatKoTimestamp, todayStr } from '../lib/util';
 
-type Tab = 'dash' | 'students' | 'words' | 'levels' | 'coding' | 'shop' | 'report';
+type Tab = 'students' | 'words' | 'shop';
 
+/**
+ * 관리 도구는 딱 세 가지로만 남깁니다.
+ * 학생 계정·PIN · 단어장 · 상점 상품 — 나머지(진도·메모·리포트)는 앞 화면 3단계에서 합니다.
+ */
 const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'dash', label: '대시보드', icon: '📊' },
-  { key: 'students', label: '학생', icon: '🧑‍🎓' },
+  { key: 'students', label: '학생 · PIN', icon: '🧑‍🎓' },
   { key: 'words', label: '단어장', icon: '📖' },
-  { key: 'levels', label: '레벨 배정', icon: '🎚️' },
-  { key: 'coding', label: '코딩', icon: '💻' },
-  { key: 'shop', label: '상점·교환', icon: '🎁' },
-  { key: 'report', label: '금요일 리포트', icon: '💬' },
+  { key: 'shop', label: '상점 상품', icon: '🎁' },
 ];
 
-/** 수강 과목 선택 3가지 (원장님 화면) */
+/** 수강 과목 선택 3가지 (원장님 화면) — 코딩이 기본, TOSEL 영어는 따로 켭니다 */
 const SUBJECT_CHOICES: { key: 'english' | 'coding' | 'both'; label: string; value: Subject[] }[] = [
-  { key: 'english', label: '영어만', value: ['english'] },
   { key: 'coding', label: '코딩만', value: ['coding'] },
-  { key: 'both', label: '영어 + 코딩', value: ['english', 'coding'] },
+  { key: 'both', label: '코딩 + TOSEL', value: ['coding', 'english'] },
+  { key: 'english', label: 'TOSEL만', value: ['english'] },
 ];
 
 function subjectKeyOf(list: Subject[] | undefined): 'english' | 'coding' | 'both' {
@@ -50,7 +47,7 @@ export default function AdminPage() {
   const store = useVocaStore();
   const { logout } = useSession();
   const toast = useToast();
-  const [tab, setTab] = useState<Tab>('dash');
+  const [tab, setTab] = useState<Tab>('students');
 
   const students = store.listStudents(true);
   const active = students.filter((s) => s.active);
@@ -63,7 +60,7 @@ export default function AdminPage() {
             <span className="grid h-9 w-9 place-items-center rounded-2xl bg-brand-600 text-base text-white shadow-soft">📚</span>
             <div>
               <p className="text-[11px] font-semibold text-slate-400">라피네코딩 두정점 · 관리자</p>
-              <p className="text-sm font-bold leading-tight text-slate-900">라피네 클래스 · 영어 &amp; 코딩</p>
+              <p className="text-sm font-bold leading-tight text-slate-900">라피네 클래스 · 관리 도구</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
@@ -109,13 +106,9 @@ export default function AdminPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-28 pt-4 md:pb-10">
-        {tab === 'dash' ? <Dashboard onGo={setTab} /> : null}
         {tab === 'students' ? <StudentsTab /> : null}
         {tab === 'words' ? <WordsTab /> : null}
-        {tab === 'levels' ? <LevelsTab /> : null}
-        {tab === 'coding' ? <CodingAdminTab /> : null}
         {tab === 'shop' ? <ShopAdminTab /> : null}
-        {tab === 'report' ? <ReportTab /> : null}
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white bg-white/95 backdrop-blur md:hidden">
@@ -140,171 +133,13 @@ export default function AdminPage() {
   );
 }
 
-/* --------------------------------- 대시보드 -------------------------------- */
-
-function Dashboard({ onGo }: { onGo: (t: Tab) => void }) {
-  const store = useVocaStore();
-  const overview = computeOverview();
-  const active = store.listStudents();
-  const logs = store
-    .allLogs()
-    .slice()
-    .sort((a, b) => b.answered_at.localeCompare(a.answered_at))
-    .slice(0, 8);
-
-  const headcount = Math.max(1, overview.todayTotal);
-  const kpis = [
-    {
-      label: '이번 주 완료 단어',
-      value: overview.weekWords,
-      unit: '개',
-      tone: 'brand' as const,
-      ratio: Math.min(1, overview.weekWords / Math.max(1, headcount * 12 * 5)),
-    },
-    { label: '오늘 접속', value: overview.activeToday, unit: `/${overview.todayTotal}명`, tone: 'sky' as const, ratio: overview.activeToday / headcount },
-    { label: '오늘 미션 완료', value: overview.todayCompleted, unit: `/${overview.todayTotal}명`, tone: 'mint' as const, ratio: overview.todayCompleted / headcount },
-    { label: '학원 정답률', value: overview.accuracy, unit: '%', tone: 'sun' as const, ratio: overview.accuracy / 100 },
-  ];
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-extrabold text-slate-900">이번 주 학원 현황</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            {formatKoTimestamp(new Date().toISOString())} 기준 · {weekStartStr()} 주간
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="soft" onClick={() => onGo('levels')}>
-            레벨 배정
-          </Button>
-          <Button size="sm" onClick={() => onGo('report')}>
-            금요일 요약 복사
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {kpis.map((k) => (
-          <Card key={k.label} className="p-4">
-            <p className="text-[11px] font-semibold text-slate-400">{k.label}</p>
-            <p className="mt-1 text-2xl font-extrabold text-slate-900">
-              {k.value}
-              <span className="ml-1 text-xs font-bold text-slate-400">{k.unit}</span>
-            </p>
-            <div className="mt-2">
-              <Bar ratio={k.ratio} tone={k.tone === 'sun' ? 'sun' : k.tone === 'mint' ? 'mint' : 'brand'} />
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-        <Card>
-          <SectionTitle sub="오늘 배정을 80% 이상 풀면 완료">미완료 학생</SectionTitle>
-          <ul className="mt-3 space-y-2">
-            {overview.incomplete.length === 0 ? (
-              <li className="rounded-2xl bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-700">
-                오늘 전원 완료했어요! 🎉
-              </li>
-            ) : (
-              overview.incomplete.map(({ student, lastSeen }) => (
-                <li key={student.id} className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-2.5">
-                  <span className="grid h-8 w-8 place-items-center rounded-xl bg-white text-xs font-bold text-slate-500">
-                    {student.name.slice(0, 1)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-slate-800">{student.name}</p>
-                    <p className="text-[11px] text-slate-500">
-                      마지막 접속 {formatKoTimestamp(lastSeen)}
-                    </p>
-                  </div>
-                  <LevelPill level={student.level} />
-                </li>
-              ))
-            )}
-          </ul>
-          <p className="mt-3 text-[11px] text-slate-400">학생이 완료하면 Supabase Realtime으로 이 화면이 새로고침 없이 갱신됩니다.</p>
-        </Card>
-
-        <Card>
-          <SectionTitle sub="첫 응답 기준">반별 정답률</SectionTitle>
-          <div className="mt-3 space-y-3">
-            {overview.classAccuracy.map((c) => (
-              <div key={c.className}>
-                <div className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-500">
-                  <span>
-                    {c.className} <span className="text-slate-400">({c.students}명)</span>
-                  </span>
-                  <span className="text-slate-800">{c.accuracy}%</span>
-                </div>
-                <Bar ratio={c.accuracy / 100} tone={c.accuracy >= 85 ? 'mint' : 'brand'} />
-              </div>
-            ))}
-            {overview.classAccuracy.length === 0 ? <p className="text-sm text-slate-400">학생을 먼저 추가해 주세요.</p> : null}
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card>
-          <SectionTitle sub="최근 8건">실시간 학습 기록</SectionTitle>
-          <ul className="mt-3 divide-y divide-slate-100">
-            {logs.map((l) => {
-              const st = store.getStudent(l.student_id);
-              const w = store.wordById(l.word_id);
-              return (
-                <li key={l.id} className="flex items-center gap-3 py-2">
-                  <span className={cn('grid h-7 w-7 place-items-center rounded-lg text-xs', l.is_correct ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500')}>
-                    {l.is_correct ? '✓' : '✕'}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
-                    <span className="font-semibold">{st?.name ?? '학생'}</span> · {w?.word ?? '단어'}{' '}
-                    <span className="text-[11px] text-slate-400">
-                      {l.mode === 'card' ? '카드' : l.mode === 'choice' ? '4지선다' : '스펠링'}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-[11px] text-slate-400">{formatKoTimestamp(l.answered_at)}</span>
-                </li>
-              );
-            })}
-            {logs.length === 0 ? <li className="py-6 text-center text-sm text-slate-400">아직 학습 기록이 없어요.</li> : null}
-          </ul>
-        </Card>
-
-        <Card>
-          <SectionTitle sub="재원생 기준">레벨 분포</SectionTitle>
-          <div className="mt-3 space-y-2">
-            {([1, 2, 3, 4, 5] as Level[]).map((lv) => {
-              const count = active.filter((s) => s.level === lv).length;
-              return (
-                <div key={lv} className="flex items-center gap-2">
-                  <LevelPill level={lv} />
-                  <div className="flex-1">
-                    <Bar ratio={active.length ? count / active.length : 0} />
-                  </div>
-                  <span className="w-6 text-right text-xs font-bold text-slate-500">{count}</span>
-                </div>
-              );
-            })}
-          </div>
-          <p className="mt-4 rounded-xl bg-brand-50 px-3 py-2 text-[11px] leading-relaxed text-brand-700">
-            진단 결과(Pre-Starter~High Junior)를 고르면 레벨 배정 탭에서 한 번에 바꿀 수 있어요.
-          </p>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
 /* ---------------------------------- 학생 ---------------------------------- */
 
 function StudentsTab() {
   const store = useVocaStore();
   const toast = useToast();
   const [addOpen, setAddOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', grade: 3, class_name: '초등A', nickname: '' });
+  const [form, setForm] = useState({ name: '', grade: 3, class_name: '초등A', nickname: '', tosel: false });
   const [busy, setBusy] = useState(false);
   const [issued, setIssued] = useState<{ student: Student; pin: string } | null>(null);
   const [query, setQuery] = useState('');
@@ -323,10 +158,12 @@ function StudentsTab() {
         class_name: form.class_name,
         nickname: form.nickname || form.name,
         level: 1,
+        // 코딩 학원 기본값은 ‘코딩만’ — TOSEL 영어는 이 스위치로 함께 켭니다
+        enabled_subjects: form.tosel ? ['coding', 'english'] : ['coding'],
       });
       setIssued(res);
       setAddOpen(false);
-      setForm({ name: '', grade: 3, class_name: '초등A', nickname: '' });
+      setForm({ name: '', grade: 3, class_name: '초등A', nickname: '', tosel: false });
     } catch (err) {
       toast(err instanceof Error ? err.message : '학생 추가에 실패했어요', 'err');
     } finally {
@@ -347,7 +184,7 @@ function StudentsTab() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900">학생 관리</h1>
+          <h1 className="text-xl font-extrabold text-slate-900">학생 계정 · PIN</h1>
           <p className="mt-0.5 text-sm text-slate-500">재원생 {students.filter((s) => s.active).length}명 · 비활성 {students.filter((s) => !s.active).length}명</p>
         </div>
         <div className="flex gap-2">
@@ -371,7 +208,7 @@ function StudentsTab() {
                 <th className="px-4 py-3 font-semibold">이름</th>
                 <th className="px-3 py-3 font-semibold">반 · 학년</th>
                 <th className="px-3 py-3 font-semibold">영어 레벨</th>
-                <th className="px-3 py-3 font-semibold">수강 과목</th>
+                <th className="px-3 py-3 font-semibold">TOSEL 영어</th>
                 <th className="px-3 py-3 font-semibold">코딩 레벨</th>
                 <th className="px-3 py-3 font-semibold">닉네임</th>
                 <th className="px-3 py-3 font-semibold">마지막 접속</th>
@@ -389,11 +226,25 @@ function StudentsTab() {
                     {st.class_name} · {LEVEL_META[st.level].grades}
                   </td>
                   <td className="px-3 py-3">
-                    <LevelPill level={st.level} />
-                    <span className="ml-1.5 text-[10px] text-slate-400">{st.tosel_level}</span>
+                    {/* 영어 레벨 배정 (예전 ‘레벨 배정’ 탭 기능을 여기로 합쳤습니다) */}
+                    <select
+                      data-testid={`admin-student-level-${st.id}`}
+                      value={st.level}
+                      onChange={(e) => {
+                        store.setStudentLevel(st.id, Number(e.target.value) as Level);
+                        toast(`${st.name} 학생 영어 레벨 · L${e.target.value}`);
+                      }}
+                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 outline-none focus:border-brand-400"
+                    >
+                      {([1, 2, 3, 4, 5] as Level[]).map((lv) => (
+                        <option key={lv} value={lv}>
+                          L{lv} · {LEVEL_META[lv].tosel}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-3 py-3">
-                    {/* 원장님이 학생별로 영어·코딩 탭을 열어 주는 선택 */}
+                    {/* TOSEL 영어 학습 사용 — 켜면 학생 화면 위에 📚 영어 / 💻 코딩 토글이 생깁니다 */}
                     <select
                       data-testid={`admin-student-subjects-${st.id}`}
                       value={subjectKeyOf(st.enabled_subjects)}
@@ -517,9 +368,39 @@ function StudentsTab() {
               className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-brand-400"
             />
           </label>
+          <button
+            type="button"
+            data-testid="admin-add-tosel"
+            onClick={() => setForm({ ...form, tosel: !form.tosel })}
+            className={cn(
+              'sm:col-span-2 flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition',
+              form.tosel ? 'border-brand-200 bg-brand-50' : 'border-slate-200 bg-white'
+            )}
+          >
+            <span>
+              <span className="block text-[12.5px] font-bold text-slate-700">📚 TOSEL 영어 학습도 함께 쓰기</span>
+              <span className="mt-0.5 block text-[11px] text-slate-500">
+                켜면 학생 화면 위에 영어 전환이 생겨요. 기본은 코딩만입니다.
+              </span>
+            </span>
+            <span
+              className={cn(
+                'relative h-6 w-11 shrink-0 rounded-full transition',
+                form.tosel ? 'bg-brand-600' : 'bg-slate-200'
+              )}
+              aria-hidden
+            >
+              <span
+                className={cn(
+                  'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all',
+                  form.tosel ? 'left-[22px]' : 'left-0.5'
+                )}
+              />
+            </span>
+          </button>
         </div>
         <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-slate-500">
-          추가하면 4자리 PIN이 자동 발급되고 Level 1로 시작해요. 진단 결과에 따라 레벨 배정 탭에서 바로 바꿀 수 있습니다.
+          추가하면 4자리 PIN이 자동 발급되고 코딩 C1 · 영어 Level 1로 시작해요. 영어 레벨·코딩 레벨은 아래 표에서 바로 바꿀 수 있습니다.
         </p>
       </Modal>
 
@@ -736,284 +617,6 @@ function WordsTab() {
           ))}
         </div>
       </Card>
-    </div>
-  );
-}
-
-/* -------------------------------- 레벨 배정 -------------------------------- */
-
-function LevelsTab() {
-  const store = useVocaStore();
-  const toast = useToast();
-  const students = store.listStudents();
-  const [draft, setDraft] = useState<Record<string, ToselLevel>>({});
-  const history = store.listLevelHistory().slice(0, 8);
-
-  const assign = (st: Student, tosel: ToselLevel) => {
-    const level = TOSEL_TO_LEVEL[tosel];
-    store.setStudentLevel(st.id, level);
-    toast(`${st.name} 학생을 Level ${level} (${tosel} 대비)로 배정했어요`);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-extrabold text-slate-900">레벨 배정</h1>
-        <p className="mt-0.5 text-sm text-slate-500">
-          친구 원장님의 무료 진단 결과를 고르면 앱 트랙이 자동으로 정해집니다. 배정 이력이 남아요.
-        </p>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
-        <Card className="overflow-hidden p-0">
-          <div className="overflow-x-auto thin-scroll">
-            <table className="w-full min-w-[560px] text-left text-sm">
-              <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-400">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">학생</th>
-                  <th className="px-3 py-3 font-semibold">현재</th>
-                  <th className="px-3 py-3 font-semibold">진단 결과</th>
-                  <th className="px-3 py-3 text-right font-semibold">배정</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {students.map((st) => {
-                  const value = draft[st.id] ?? st.tosel_level;
-                  const targetLevel = TOSEL_TO_LEVEL[value as ToselLevel];
-                  const changed = targetLevel !== st.level;
-                  return (
-                    <tr key={st.id}>
-                      <td className="px-4 py-3">
-                        <p className="font-bold text-slate-800">{st.name}</p>
-                        <p className="text-[11px] text-slate-400">
-                          {st.class_name} · {st.nickname}
-                        </p>
-                      </td>
-                      <td className="px-3 py-3">
-                        <LevelPill level={st.level} />
-                      </td>
-                      <td className="px-3 py-3">
-                        <select
-                          value={value}
-                          onChange={(e) => setDraft({ ...draft, [st.id]: e.target.value as ToselLevel })}
-                          className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold outline-none focus:border-brand-400"
-                        >
-                          {(['Pre-Starter', 'Starter', 'Basic', 'Junior', 'High Junior'] as ToselLevel[]).map((t) => (
-                            <option key={t} value={t}>
-                              {t} → L{TOSEL_TO_LEVEL[t]}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        <Button size="sm" variant={changed ? 'primary' : 'ghost'} disabled={!changed} onClick={() => assign(st, value as ToselLevel)}>
-                          {changed ? '배정' : '배정됨'}
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        <div className="space-y-4">
-          <Card>
-            <SectionTitle sub="진단 결과와 앱 트랙">TOSEL 대응표</SectionTitle>
-            <ul className="mt-3 space-y-2 text-xs">
-              {(['Pre-Starter', 'Starter', 'Basic', 'Junior', 'High Junior'] as ToselLevel[]).map((t) => {
-                const lv = TOSEL_TO_LEVEL[t];
-                return (
-                  <li key={t} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
-                    <span className="w-24 font-bold text-slate-700">{t}</span>
-                    <span className="text-slate-400">→</span>
-                    <LevelPill level={lv} />
-                    <span className="ml-auto text-slate-500">{LEVEL_META[lv].grades}</span>
-                  </li>
-                );
-              })}
-            </ul>
-            <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-              표기는 Level 1~5로 통일합니다. 공식 TOSEL 교재와 혼동되지 않도록 「토셀 대비」 대신 「TOSEL ○○ 대비」로만 표기해요.
-            </p>
-          </Card>
-
-          <Card>
-            <SectionTitle sub="최근 변경">배정 이력</SectionTitle>
-            <ul className="mt-3 space-y-2">
-              {history.length === 0 ? <li className="text-sm text-slate-400">아직 변경 이력이 없어요.</li> : null}
-              {history.map((h) => {
-                const st = store.getStudent(h.student_id);
-                return (
-                  <li key={h.id} className="rounded-xl bg-slate-50 px-3 py-2 text-xs">
-                    <span className="font-bold text-slate-700">{st?.name ?? '학생'}</span>{' '}
-                    <span className="text-slate-500">
-                      {h.from_level ? `L${h.from_level} → ` : ''}L{h.to_level} ({h.tosel_level})
-                    </span>
-                    <span className="ml-1 text-slate-400">· {formatKoTimestamp(h.changed_at)}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------ 코딩 (레벨 · 과목 권한) ------------------------------ */
-
-function CodingAdminTab() {
-  const store = useVocaStore();
-  const toast = useToast();
-  const overview = store.codingOverview();
-  const recent = store.allCodingSessions().slice(0, 6);
-  const codingStudents = overview.filter((o) => o.student.enabled_subjects.includes('coding'));
-  const playingToday = codingStudents.filter((o) => o.gameRounds > 0).length;
-  const openWrong = overview.reduce((sum, o) => sum + o.wrongOpen, 0);
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-extrabold text-slate-900">코딩 학습 현황</h1>
-        <p className="mt-0.5 text-sm text-slate-500">
-          학생별 코딩 레벨(C1~C4)과 수강 과목(영어·코딩 탭)을 여기서 바로 바꿀 수 있어요. 바꾼 즉시 학생 화면에 적용됩니다.
-        </p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="p-4">
-          <p className="text-[11px] font-semibold text-slate-400">코딩 수강생</p>
-          <p className="mt-1 text-2xl font-extrabold text-slate-900" data-testid="admin-coding-students">
-            {codingStudents.length}명
-          </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-[11px] font-semibold text-slate-400">오늘 게임 플레이</p>
-          <p className="mt-1 text-2xl font-extrabold text-slate-900">{playingToday}명</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-[11px] font-semibold text-slate-400">코딩 오답 대기</p>
-          <p className="mt-1 text-2xl font-extrabold text-slate-900">{openWrong}개</p>
-        </Card>
-      </div>
-
-      <Card className="overflow-hidden p-0">
-        <div className="overflow-x-auto thin-scroll">
-          <table className="w-full min-w-[860px] text-left text-sm">
-            <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-400">
-              <tr>
-                <th className="px-4 py-3 font-semibold">학생</th>
-                <th className="px-3 py-3 font-semibold">수강 과목</th>
-                <th className="px-3 py-3 font-semibold">코딩 레벨</th>
-                <th className="px-3 py-3 font-semibold">푼 문제</th>
-                <th className="px-3 py-3 font-semibold">정답률</th>
-                <th className="px-3 py-3 font-semibold">오답 대기</th>
-                <th className="px-3 py-3 font-semibold">게임</th>
-                <th className="px-3 py-3 text-right font-semibold">오늘 적립</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {overview.map((row) => (
-                <tr key={row.student.id} data-testid={`admin-coding-row-${row.student.id}`} className={cn(!row.student.active && 'opacity-50')}>
-                  <td className="px-4 py-3">
-                    <p className="font-bold text-slate-800">{row.student.name}</p>
-                    <p className="text-[11px] text-slate-400">
-                      {row.student.class_name} · {row.lastPlayedAt ? `최근 ${formatKoTimestamp(row.lastPlayedAt)}` : '플레이 전'}
-                    </p>
-                  </td>
-                  <td className="px-3 py-3">
-                    <select
-                      data-testid={`admin-subjects-${row.student.id}`}
-                      value={subjectKeyOf(row.student.enabled_subjects)}
-                      onChange={(e) => {
-                        const choice = SUBJECT_CHOICES.find((c) => c.key === e.target.value);
-                        if (!choice) return;
-                        store.setStudentSubjects(row.student.id, choice.value);
-                        toast(`${row.student.name} 학생 수강 과목 · ${choice.label}`);
-                      }}
-                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 outline-none focus:border-brand-400"
-                    >
-                      {SUBJECT_CHOICES.map((c) => (
-                        <option key={c.key} value={c.key}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-3 py-3">
-                    <select
-                      data-testid={`admin-coding-level-${row.student.id}`}
-                      value={row.student.coding_level}
-                      onChange={(e) => {
-                        store.setStudentCodingLevel(row.student.id, e.target.value as CodingLevel);
-                        toast(`${row.student.name} 학생 코딩 레벨 · ${e.target.value}`);
-                      }}
-                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 outline-none focus:border-brand-400"
-                    >
-                      {CODING_LEVELS.map((lv) => (
-                        <option key={lv} value={lv}>
-                          {lv} · {CODING_LEVEL_META[lv].desc.split(' · ')[0]}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-3 py-3 text-slate-600 tabular-nums">{row.solved}개</td>
-                  <td className="px-3 py-3 text-slate-600 tabular-nums">{row.answered ? `${row.accuracy}%` : '—'}</td>
-                  <td className="px-3 py-3">
-                    <span className={cn('text-[11px] font-bold', row.wrongOpen ? 'text-rose-400' : 'text-slate-400')}>
-                      {row.wrongOpen}개
-                    </span>
-                  </td>
-                  <td className="px-3 py-3 text-slate-600 tabular-nums">{row.gameRounds}판</td>
-                  <td className="px-3 py-3 text-right font-bold text-amber-700 tabular-nums">{row.cashToday}원</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <SectionTitle sub="최근 판 기록">코딩 게임 기록</SectionTitle>
-          <ul className="mt-3 space-y-1.5">
-            {recent.length === 0 ? <li className="text-sm text-slate-400">아직 플레이 기록이 없어요.</li> : null}
-            {recent.map((s) => (
-              <li key={s.id} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs">
-                <span>{CODING_GAME_META[s.game].icon}</span>
-                <span className="font-bold text-slate-700">{store.getStudent(s.student_id)?.name ?? '학생'}</span>
-                <span className="flex-1 text-slate-500">{CODING_GAME_META[s.game].label}</span>
-                <span className="text-slate-500 tabular-nums">
-                  {s.score}/{s.total}
-                </span>
-                <span className="font-bold text-amber-700">+{s.cash_earned}원</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-
-        <Card>
-          <SectionTitle sub="라피네코딩 수업 순서">4단계 커리큘럼</SectionTitle>
-          <ul className="mt-3 space-y-2 text-xs">
-            {CODING_LEVELS.map((lv) => (
-              <li key={lv} className="rounded-xl bg-slate-50 px-3 py-2">
-                <p className="flex items-center gap-2">
-                  <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', CODING_LEVEL_META[lv].badge)}>{lv}</span>
-                  <span className="font-bold text-slate-700">{CODING_LEVEL_META[lv].desc}</span>
-                  <span className="ml-auto text-[10px] text-slate-400">{CODING_LEVEL_META[lv].grades}</span>
-                </p>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-            수강 과목을 「영어만」·「코딩만」으로 바꾸면 학생 하단 탭에서 다른 과목이 사라지고, 「영어 + 코딩」이면 상단에 전환
-            스위치가 보입니다. 캐시 지갑은 두 과목이 함께 써서 하루 상한을 나눠 씁니다.
-          </p>
-        </Card>
-      </div>
     </div>
   );
 }
@@ -1409,156 +1012,6 @@ function ShopAdminTab() {
             학생은 하루 50원씩 모아서 교환해요. 츄파춥스(300원)는 약 6일, 3,000원 금액권은 약 60일치입니다.
           </p>
         </div>
-      </Modal>
-    </div>
-  );
-}
-
-/* ------------------------------ 금요일 리포트 ------------------------------ */
-
-function ReportTab() {
-  const store = useVocaStore();
-  const toast = useToast();
-  const [className, setClassName] = useState('전체');
-  const [preview, setPreview] = useState<Student | null>(null);
-  const students = store.listStudents();
-  const classes = ['전체', ...new Set(students.map((s) => s.class_name))];
-  const target = students.filter((s) => className === '전체' || s.class_name === className);
-  const entries = target.map((student) => ({ student, stats: computeWeekStats(student) }));
-
-  const copyOne = async (student: Student) => {
-    const stats = computeWeekStats(student);
-    const message = buildParentMessage(student, stats);
-    const ok = await copyText(message);
-    store.saveReport({
-      student_id: student.id,
-      week_start: weekStartStr(),
-      words_done: stats.wordsDone,
-      accuracy: stats.accuracy,
-      streak_days: stats.streakDays,
-      message,
-      opened_at: null,
-    });
-    toast(ok ? '복사됐어요. 카카오톡에 붙여넣으세요' : '복사에 실패했어요', ok ? 'ok' : 'err');
-  };
-
-  const copyAll = async () => {
-    const message = buildClassMessage(entries);
-    const ok = await copyText(message);
-    entries.forEach(({ student, stats }) =>
-      store.saveReport({
-        student_id: student.id,
-        week_start: weekStartStr(),
-        words_done: stats.wordsDone,
-        accuracy: stats.accuracy,
-        streak_days: stats.streakDays,
-        message: buildParentMessage(student, stats),
-        opened_at: null,
-      })
-    );
-    toast(ok ? `${entries.length}명 요약을 복사했어요. 카톡에 붙여넣으세요` : '복사에 실패했어요', ok ? 'ok' : 'err');
-  };
-
-  const previewStats = preview ? computeWeekStats(preview) : null;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-extrabold text-slate-900">금요일 학부모 요약</h1>
-          <p className="mt-0.5 text-sm text-slate-500">복사해서 카카오톡에 붙여넣기만 하면 돼요. 자동 발송은 하지 않습니다.</p>
-        </div>
-        <Button data-testid="copy-all" size="sm" onClick={copyAll} disabled={!entries.length}>
-          {className === '전체' ? '전체 복사' : `${className} 전체 복사`}
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5">
-        {classes.map((c) => (
-          <button
-            key={c}
-            onClick={() => setClassName(c)}
-            className={cn(
-              'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-              className === c ? 'bg-brand-600 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50'
-            )}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        {entries.map(({ student, stats }) => (
-          <Card key={student.id} className="flex flex-col gap-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                  {student.name}
-                  <LevelPill level={student.level} />
-                </p>
-                <p className="mt-0.5 text-[11px] text-slate-400">
-                  {student.class_name} · {stats.wordsDone}단어 · 정답률 {stats.accuracy}% · {stats.streakDays}일 연속
-                </p>
-              </div>
-              <span className="rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-400">{student.nickname}</span>
-            </div>
-            <pre className="whitespace-pre-wrap rounded-2xl bg-slate-50 p-3 font-sans text-[11.5px] leading-relaxed text-slate-600">
-              {buildParentMessage(student, stats)}
-            </pre>
-            <div className="flex gap-2">
-              <Button data-testid="copy-one" size="sm" className="flex-1" onClick={() => copyOne(student)}>
-                복사
-              </Button>
-              <Button data-testid="preview-report" size="sm" variant="ghost" className="flex-1" onClick={() => setPreview(student)}>
-                리포트 미리보기
-              </Button>
-            </div>
-          </Card>
-        ))}
-        {entries.length === 0 ? (
-          <Card>
-            <p className="py-8 text-center text-sm text-slate-400">이 반에는 학생이 없습니다.</p>
-          </Card>
-        ) : null}
-      </div>
-
-      <Card>
-        <SectionTitle sub="복사 후 안내">이렇게 보내 주세요</SectionTitle>
-        <ol className="mt-3 space-y-1.5 text-xs leading-relaxed text-slate-500">
-          <li>1. 학생별 「복사」 → 카카오톡 학부모 채팅방에 붙여넣기 (학생 1명당 3초)</li>
-          <li>2. 반 전체는 3~4장 분량이라 반을 나눠 복사하는 걸 권장해요</li>
-          <li>3. 문구는 쉼표·슬래시·줄바꿈만 사용해 카톡에서 걸러지지 않게 했어요</li>
-          <li>4. 링크를 누르면 학부모는 우리 아이 리포트만 볼 수 있어요 (로그인 없음)</li>
-        </ol>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button size="sm" variant="ghost" onClick={() => { download(`rafine_weekly_${weekStartStr()}.csv`, store.backupStudentsCsv()); toast('학생 명단 백업을 내려받았어요'); }}>
-            학생 명단 백업
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              if (entries[0]) {
-                const url = reportUrl(entries[0].student);
-                copyText(url).then((ok) => toast(ok ? '리포트 링크를 복사했어요' : '복사 실패', ok ? 'ok' : 'err'));
-              }
-            }}
-          >
-            첫 학생 리포트 링크 복사
-          </Button>
-        </div>
-      </Card>
-
-      <p className="text-[11px] leading-relaxed text-slate-400">
-        정답률은 첫 응답 기준입니다. 재시도를 포함하면 숫자가 의미를 잃기 때문이에요. 이번 주 누적 {pct(
-          entries.reduce((sum, e) => sum + e.stats.correct, 0),
-          Math.max(1, entries.reduce((sum, e) => sum + e.stats.answered, 0))
-        )}% (문항 기준).
-      </p>
-
-      <Modal open={!!preview} onClose={() => setPreview(null)} title="학부모 리포트 미리보기" wide>
-        {preview && previewStats ? <ParentReportCard student={preview} stats={previewStats} /> : null}
       </Modal>
     </div>
   );

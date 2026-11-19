@@ -133,3 +133,16 @@ export function pct(correct: number, total: number): number {
   if (!total) return 0;
   return Math.round((correct / total) * 100);
 }
+
+/**
+ * 이름 뒤에 붙는 주격 조사 — 받침이 있으면 "서연이가", 없으면 "태호가".
+ * 학생 이름을 문장 안에 자연스럽게 넣을 때 씁니다.
+ */
+export function nameWithSubject(name: string): string {
+  const last = (name || '').trim().slice(-1);
+  if (!last) return '친구가';
+  const code = last.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return `${name}가`;
+  const hasJong = (code - 0xac00) % 28 !== 0;
+  return hasJong ? `${name}이가` : `${name}가`;
+}

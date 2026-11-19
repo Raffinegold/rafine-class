@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useSession, useVocaStore } from '../app-context';
 import { Badge, Button, Modal, PinPad } from '../components/ui';
-import { LEVEL_META } from '../types';
+import { CODING_LEVEL_META } from '../types';
 import { SEED_DEMO_PINS } from '../data/seed';
 import type { Student } from '../types';
 import { cn } from '../lib/util';
@@ -109,13 +109,13 @@ export default function LoginPage() {
             <span className="ml-2 align-middle text-sm font-bold text-sunny">Rafine Class</span>
           </h1>
           <p className="mt-1.5 text-[13px] leading-relaxed text-white/75">
-            오늘 배운 것, 만든 작품, 그리고 다정한 월말 리포트까지 한 곳에.
+            오늘 배운 코딩, 만든 작품, 그리고 다정한 월말 리포트까지 한 곳에.
           </p>
           <p className="mt-1 text-[11px] font-semibold text-white/55">박종혁 원장 · 미술심리상담사 자격 기반 맞춤 관리</p>
           <div className="mt-4 flex flex-wrap gap-1.5">
-            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold">📚 영단어 5단계</span>
-            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold">🎮 10종 게임</span>
-            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold">🗂️ 24주 + 내 작품</span>
+            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold">💻 24주 코딩 진도</span>
+            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold">🎮 코딩 게임 5종</span>
+            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold">🎨 내 작품 보관함</span>
             <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold">📄 월말 리포트</span>
           </div>
         </div>
@@ -193,11 +193,14 @@ export default function LoginPage() {
                         <span className="flex items-center gap-2">
                           <span className="truncate text-[15px] font-bold text-slate-900">{st.name}</span>
                           <Badge tone="brand" className="shrink-0">
-                            L{st.level}
+                            {st.enabled_subjects.includes('coding')
+                              ? `💻 ${CODING_LEVEL_META[st.coding_level].short}`
+                              : '📚 TOSEL'}
                           </Badge>
                         </span>
                         <span className="mt-0.5 block truncate text-xs text-slate-500">
-                          {st.class_name} · {LEVEL_META[st.level].grades} · {st.nickname}
+                          {st.class_name} · {CODING_LEVEL_META[st.coding_level].desc.split(' · ')[0]}
+                          {st.enabled_subjects.includes('english') ? ' · 📚 영어' : ''}
                         </span>
                       </span>
                       <span className="text-slate-300">›</span>
@@ -218,7 +221,7 @@ export default function LoginPage() {
                   {isCloud ? '원장님 계정으로 로그인' : '데모 관리자 PIN은 9999 입니다'}
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-brand-600/80">
-                  학생 현황 · 레벨 배정 · CSV 단어장 · 금요일 학부모 요약은 로그인 후 이용할 수 있어요.
+                  24주 진도 · 수업 메모 · 월말 리포트와 학생 계정·PIN · 단어장 · 상점 관리는 로그인 후 이용할 수 있어요.
                 </p>
               </div>
               {isCloud ? (
@@ -253,16 +256,17 @@ export default function LoginPage() {
             </p>
             {!isCloud ? (
               <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                샘플 학생 5명과 Level 1~5 각 20단어(총 100단어)가 브라우저에 저장되어 있어요. .env에 Supabase 주소를 넣으면 실제 DB로 전환됩니다.
+                샘플 학생 5명의 24주 진도·작품·메모와 코딩 문제, TOSEL 영어 단어 100개가 브라우저에 저장되어 있어요. .env에
+                Supabase 주소를 넣으면 실제 DB로 전환됩니다.
               </p>
             ) : null}
           </div>
         </div>
 
         <p className="mt-5 text-center text-[11px] leading-relaxed text-slate-400">
-          단어는 교육부 기본 어휘를 참고해 자체 제작했습니다. 뜻과 예문은 사전 문장을 복제하지 않았어요.
+          코딩 문제와 TOSEL 단어는 자체 제작했습니다. 뜻과 예문은 사전 문장을 복제하지 않았어요.
           <br />
-          라피네코딩컴퓨터학원 두정점 · 영어 어휘 + 코딩 학습 도구
+          라피네코딩컴퓨터학원 두정점 · 24주 코딩 커리큘럼 + 작품 기록 도구
         </p>
       </div>
 
@@ -275,10 +279,11 @@ export default function LoginPage() {
               </span>
               <div>
                 <p className="text-sm font-bold text-brand-800">
-                  {selected.class_name} · {LEVEL_META[selected.level].grades}
+                  {selected.class_name} · {CODING_LEVEL_META[selected.coding_level].label}
                 </p>
                 <p className="text-xs text-brand-600/80">
-                  Level {selected.level} · TOSEL {selected.tosel_level} 대비
+                  {CODING_LEVEL_META[selected.coding_level].desc}
+                  {selected.enabled_subjects.includes('english') ? ` · TOSEL ${selected.tosel_level} 대비` : ''}
                 </p>
               </div>
             </div>

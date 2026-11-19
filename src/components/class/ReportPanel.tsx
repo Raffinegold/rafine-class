@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Student } from '../../types';
 import { monthKey, monthLabel, shiftMonth, useClassStore } from '../../lib/classStore';
-import { buildMonthlyReport } from '../../lib/monthlyReport';
+import { buildKakaoText, buildMonthlyReport } from '../../lib/monthlyReport';
 import { copyText } from '../../lib/report';
 import { TRACK_META } from '../../lib/curriculum';
 import { Button, Card, useToast } from '../ui';
@@ -19,8 +19,42 @@ export default function ReportPanel({ student, onGoMemo }: { student: Student; o
 
   const empty = report.memos.length === 0 && report.works.length === 0;
 
+  /* ---- 원장 종합 소견: 자동 초안을 편집할 수 있고, 직접 고친 글은 저장해 둡니다 ---- */
+  const autoText = report.counselor.join('\n\n');
+  const saved = cls.counselorOverride(student.id, baseMonth);
+  const [draft, setDraft] = useState(saved ?? autoText);
+
+  useEffect(() => {
+    const next = cls.counselorOverride(student.id, baseMonth) ?? report.counselor.join('\n\n');
+    setDraft(next);
+    // 학생·월이 바뀌거나, 다른 화면에서 메모·작품이 바뀌면 초안을 새로 채웁니다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student.id, baseMonth, cls.version]);
+
+  const counselorParagraphs = useMemo(() => {
+    const clean = draft
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    return clean.length ? clean : report.counselor;
+  }, [draft, report.counselor]);
+
+  const edited = draft.trim() !== autoText.trim();
+
+  const onCounselorChange = (value: string) => {
+    setDraft(value);
+    // 빈 칸은 저장하지 않아요 — 다 지우고 다시 쓰는 중에 자동 초안이 되살아나지 않게
+    if (value.trim()) cls.setCounselorOverride(student.id, baseMonth, value);
+  };
+
+  const resetCounselor = () => {
+    cls.clearCounselorOverride(student.id, baseMonth);
+    setDraft(autoText);
+    toast('자동 초안으로 되돌렸어요');
+  };
+
   const copy = async () => {
-    const ok = await copyText(report.kakaoText);
+    const ok = await copyText(buildKakaoText(report, counselorParagraphs));
     toast(ok ? '카톡에 붙여넣을 수 있게 복사했어요 💬' : '복사가 막혔어요. 미리보기를 길게 눌러 복사해 주세요', ok ? 'ok' : 'err');
   };
 
@@ -94,14 +128,24 @@ export default function ReportPanel({ student, onGoMemo }: { student: Student; o
 
         <Section title="이번 달 만든 작품">
           {report.works.length ? (
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
               {report.works.map((w) => (
-                <li key={w.id} className="rounded-2xl bg-slate-50 px-4 py-3">
-                  <p className="text-[14px] font-extrabold text-slate-800">{w.title}</p>
-                  <p className="mt-0.5 text-[11px] font-semibold text-slate-400">
-                    {w.date.replace(/-/g, '.')} · {w.tool}
-                  </p>
-                  {w.comment ? <p className="mt-1 text-[13px] leading-relaxed text-slate-600">{w.comment}</p> : null}
+                <li key={w.id} className="overflow-hidden rounded-2xl bg-slate-50">
+                  {w.photo ? (
+                    <img
+                      src={w.photo}
+                      alt={`${w.title} 작품 사진`}
+                      data-testid={`report-work-photo-${w.id}`}
+                      className="aspect-[16/10] w-full object-cover"
+                    />
+                  ) : null}
+                  <div className="px-4 py-3">
+                    <p className="text-[14px] font-extrabold text-slate-800">{w.title}</p>
+                    <p className="mt-0.5 text-[11px] font-semibold text-slate-400">
+                      {w.date.replace(/-/g, '.')} · {w.tool}
+                    </p>
+                    {w.comment ? <p className="mt-1 text-[13px] leading-relaxed text-slate-600">{w.comment}</p> : null}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -150,12 +194,32 @@ export default function ReportPanel({ student, onGoMemo }: { student: Student; o
         </Section>
 
         <Section title="원장 종합 소견">
-          <div className="space-y-2">
-            {report.counselor.map((p, i) => (
-              <p key={i} className="text-[13.5px] leading-[1.85] text-slate-700">
-                {p}
-              </p>
-            ))}
+          {/* 화면에서는 초안을 그대로 고칠 수 있고, 인쇄·PDF에는 일반 문단으로 깔끔하게 나갑니다 */}
+          <div className="mb-2 flex items-center justify-between gap-2 print:hidden">
+            <p className="text-[10.5px] font-semibold text-slate-400">
+              ✏️ 자동 초안이에요. 문장을 눌러 바로 고치면 카톡 전송·인쇄에 그대로 반영돼요.
+            </p>
+            {edited || saved ? (
+              <button
+                type="button"
+                onClick={resetCounselor}
+                data-testid="report-counselor-reset"
+                className="shrink-0 rounded-lg border border-slate-200 px-2 py-1 text-[10.5px] font-bold text-slate-500 hover:bg-slate-50"
+              >
+                자동 초안으로
+              </button>
+            ) : null}
+          </div>
+          <textarea
+            data-testid="report-counselor-input"
+            value={draft}
+            onChange={(e) => onCounselorChange(e.target.value)}
+            rows={Math.min(14, Math.max(6, draft.split('\n').length + 2))}
+            aria-label="원장 종합 소견 수정"
+            className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-[13.5px] leading-[1.85] text-slate-700 outline-none focus:border-brand-400 print:hidden"
+          />
+          <div className="hidden whitespace-pre-wrap text-[13.5px] leading-[1.85] text-slate-700 print:block">
+            {counselorParagraphs.join('\n\n')}
           </div>
           <p className="mt-4 text-right text-[12px] font-bold text-slate-600">
             라피네코딩컴퓨터학원 두정점
@@ -184,7 +248,7 @@ export default function ReportPanel({ student, onGoMemo }: { student: Student; o
       </div>
 
       <p className="text-center text-[11px] leading-relaxed text-slate-400">
-        ‘카톡 전송용 복사’를 누르면 카카오톡에 그대로 붙여넣을 수 있는 글이 복사돼요.
+        ‘카톡 전송용 복사’를 누르면 카카오톡에 그대로 붙여넣을 수 있는 글이 복사돼요. 종합 소견을 고친 뒤 복사하면 고친 문장으로 나가요.
       </p>
     </div>
   );

@@ -32,6 +32,8 @@ export interface Work {
   tool: string;
   comment: string;
   link: string;
+  /** 작품 사진 1장 (가로 800px JPEG data URL) — 카드와 월말 리포트에 함께 나옵니다 */
+  photo?: string;
 }
 
 interface DB {
@@ -39,6 +41,8 @@ interface DB {
   memos: LessonMemo[];
   works: Work[];
   done: Record<string, number[]>;
+  /** 원장님이 직접 고친 월말 리포트 종합 소견 — `${student_id}:${YYYY-MM}` 키 */
+  counselors: Record<string, string>;
 }
 
 const KEY = 'rafine-class-db-v1';
@@ -170,7 +174,7 @@ function seed(): DB {
     'stu-minjun': [1, 2, 3],
     'stu-yujin': [1, 2],
   };
-  return { profiles, memos, works, done };
+  return { profiles, memos, works, done, counselors: {} };
 }
 
 function load(): DB {
@@ -184,6 +188,7 @@ function load(): DB {
       memos: parsed.memos ?? [],
       works: parsed.works ?? [],
       done: parsed.done ?? {},
+      counselors: parsed.counselors ?? {},
     };
   } catch {
     return seed();
@@ -285,6 +290,7 @@ class ClassStore {
       comment: input.comment.trim(),
       link: input.link.trim(),
       date: input.date || todayStr(),
+      photo: input.photo || undefined,
     };
     this.db.works = [work, ...this.db.works];
     this.commit();
@@ -319,6 +325,29 @@ class ClassStore {
     if (done) cur.add(week);
     else cur.delete(week);
     this.db.done[studentId] = Array.from(cur).sort((a, b) => a - b);
+    this.commit();
+  }
+
+  /* ------------------------ 월말 리포트 종합 소견 직접 수정 ------------------------ */
+
+  counselorOverride(studentId: string, month: string): string | null {
+    const v = this.db.counselors[`${studentId}:${month}`];
+    return typeof v === 'string' ? v : null;
+  }
+
+  setCounselorOverride(studentId: string, month: string, text: string) {
+    const key = `${studentId}:${month}`;
+    const next = text.trim() ? text : '';
+    if ((this.db.counselors[key] ?? '') === next) return;
+    if (next) this.db.counselors[key] = next;
+    else delete this.db.counselors[key];
+    this.commit();
+  }
+
+  clearCounselorOverride(studentId: string, month: string) {
+    const key = `${studentId}:${month}`;
+    if (!(key in this.db.counselors)) return;
+    delete this.db.counselors[key];
     this.commit();
   }
 

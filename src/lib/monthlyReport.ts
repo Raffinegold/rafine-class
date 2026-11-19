@@ -174,10 +174,13 @@ export function buildMonthlyReport(student: Student, month: string): MonthlyRepo
     counselor,
   };
 
-  return { ...report, kakaoText: toKakaoText(report) };
+  return { ...report, kakaoText: buildKakaoText(report) };
 }
 
-function toKakaoText(r: Omit<MonthlyReport, 'kakaoText'>): string {
+/**
+ * 카톡 전송용 글 — 원장님이 리포트에서 종합 소견을 직접 고쳤다면 그 문단으로 바꿔 넣습니다.
+ */
+export function buildKakaoText(r: Omit<MonthlyReport, 'kakaoText'>, counselorOverride?: string[]): string {
   const lines: string[] = [];
   lines.push(`[라피네 클래스] ${r.monthLabel} 월말 리포트`);
   lines.push(`${r.studentName} (${r.gradeLabel}) · ${r.trackLabel}`);
@@ -214,7 +217,7 @@ function toKakaoText(r: Omit<MonthlyReport, 'kakaoText'>): string {
   r.improvements.forEach((s) => lines.push(`· ${s}`));
   lines.push('');
   lines.push(`▸ 원장 종합 소견`);
-  r.counselor.forEach((p) => lines.push(p));
+  (counselorOverride && counselorOverride.length ? counselorOverride : r.counselor).forEach((p) => lines.push(p));
   lines.push('');
   lines.push('— 라피네코딩컴퓨터학원 두정점 · 박종혁 원장(미술심리상담사)');
   lines.push('041-564-1101 · 카톡 상담 https://pf.kakao.com/_NPJhG');

@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSession } from '../app-context';
 import { useClassStore } from '../lib/classStore';
-import { REVIEW_CARDS, type ConceptCard } from '../lib/reviewHints';
+import { REVIEW_CARDS, highlightForWeek, type ConceptCard } from '../lib/reviewHints';
 import { TRACK_META, type Track } from '../lib/curriculum';
-import { cn } from '../lib/util';
+import { cn, nameWithSubject } from '../lib/util';
 import StudentHeader from '../components/StudentHeader';
 import StudentNav from '../components/StudentNav';
 
@@ -17,9 +17,28 @@ export default function ReviewHintsPage() {
   const [track, setTrack] = useState<Track>(initial);
   const [opened, setOpened] = useState<string | null>(null);
 
+  /* 원장님이 체크한 24주 진도 → 다음에 배울 주차를 그대로 힌트로 연결합니다 */
+  const highlight = useMemo(() => {
+    if (!student) return null;
+    const nextWeek = cls.nextWeek(student.id);
+    const doneCount = cls.doneWeeks(student.id).length;
+    return highlightForWeek(myTrack, nextWeek, doneCount);
+    // cls.version 이 바뀌면(주차 체크) 카드가 바로 새 주차로 바뀝니다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.id, myTrack, cls.version]);
+
   if (!student) return null;
   const cards = REVIEW_CARDS[track] ?? [];
   const meta = TRACK_META[track];
+  const highlightIds = new Set(highlight?.cards.map((c) => c.id) ?? []);
+
+  const jumpToCard = (card: ConceptCard) => {
+    setTrack(myTrack);
+    setOpened(`${card.id}-0`);
+    window.setTimeout(() => {
+      document.getElementById(`hint-card-${card.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  };
 
   return (
     <div className="min-h-screen pb-safe">
@@ -39,7 +58,72 @@ export default function ReviewHintsPage() {
       />
 
       <main className="mx-auto max-w-3xl px-4 pb-32 pt-5">
-        <div className="rounded-3xl bg-gradient-to-br from-amber-50 via-white to-brand-50 px-5 py-5 shadow-soft">
+        {highlight ? (
+          <section
+            data-testid="hint-week-highlight"
+            className="rounded-3xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 via-white to-brand-50 px-4 py-4 shadow-card"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] font-extrabold text-amber-700">
+                🔥 지금 {nameWithSubject(student.name)} 배우는 {highlight.plan.week}주차 핵심 힌트
+              </p>
+              <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-200">
+                {TRACK_META[myTrack].emoji} {TRACK_META[myTrack].short}
+              </span>
+            </div>
+
+            <p className="mt-1.5 text-[17px] font-extrabold leading-snug text-slate-900" data-testid="hint-week-title">
+              {highlight.plan.week}주차 · {highlight.plan.title}
+            </p>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-slate-600">
+              이번 주 목표 — {highlight.plan.goal}
+            </p>
+
+            <div className="mt-2.5 flex items-center gap-2">
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full rounded-full bg-amber-400"
+                  style={{ width: `${Math.round((highlight.doneCount / 24) * 100)}%` }}
+                />
+              </div>
+              <span className="text-[10.5px] font-bold text-slate-400">24주 중 {highlight.doneCount}주 완료</span>
+            </div>
+
+            <ul className="mt-3 space-y-2">
+              {highlight.cards.map((card) => (
+                <li key={card.id} className="rounded-2xl bg-white/90 px-3.5 py-3 ring-1 ring-amber-100">
+                  <p className="flex items-center gap-1.5 text-[13px] font-extrabold text-slate-800">
+                    <span>{card.emoji}</span>
+                    {card.title}
+                  </p>
+                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-500">{card.oneLiner}</p>
+                  <ul className="mt-1.5 space-y-0.5">
+                    {card.points.slice(0, 3).map((point) => (
+                      <li key={point} className="flex gap-1.5 text-[12px] leading-relaxed text-slate-600">
+                        <span className="text-amber-400">·</span>
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => jumpToCard(card)}
+                    data-testid={`hint-week-open-${card.id}`}
+                    className="mt-2 rounded-xl bg-amber-400/90 px-2.5 py-1.5 text-[11px] font-extrabold text-slate-900 transition active:scale-[0.98] hover:bg-amber-400"
+                  >
+                    막힐 때 보는 힌트 펼치기
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-[10.5px] leading-relaxed text-amber-700/80">
+              {highlight.plan.week === 24
+                ? '마지막 주차예요. 메인 작품 발표까지 힘내요!'
+                : `이번 주를 끝내면 다음은 ${highlight.plan.week + 1}주차로 넘어가요.`}
+            </p>
+          </section>
+        ) : null}
+
+        <div className="mt-3 rounded-3xl bg-gradient-to-br from-amber-50 via-white to-brand-50 px-5 py-5 shadow-soft">
           <h1 className="text-xl font-extrabold text-slate-900">집에서 막힐 때 보는 카드</h1>
           <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
             정답 코드는 없어요. 대신 어디를 먼저 보면 되는지 알려 줘요. 스스로 한 번 찾아보는 게 제일 오래 남아요.
@@ -79,6 +163,7 @@ export default function ReviewHintsPage() {
               card={card}
               opened={opened}
               setOpened={setOpened}
+              thisWeek={highlightIds.has(card.id) && track === myTrack}
             />
           ))}
         </div>
@@ -93,17 +178,30 @@ function ConceptCardView({
   card,
   opened,
   setOpened,
+  thisWeek,
 }: {
   card: ConceptCard;
   opened: string | null;
   setOpened: (v: string | null) => void;
+  thisWeek?: boolean;
 }) {
   return (
-    <section className="rounded-3xl border border-white bg-white p-5 shadow-soft">
+    <section
+      id={`hint-card-${card.id}`}
+      className={cn(
+        'scroll-mt-24 rounded-3xl border bg-white p-5 shadow-soft',
+        thisWeek ? 'border-amber-300 ring-2 ring-amber-200' : 'border-white'
+      )}
+    >
       <div className="flex items-start gap-3">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-brand-50 text-xl">{card.emoji}</span>
-        <div>
-          <h2 className="text-[17px] font-extrabold leading-snug text-slate-900">{card.title}</h2>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h2 className="text-[17px] font-extrabold leading-snug text-slate-900">{card.title}</h2>
+            {thisWeek ? (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">이번 주</span>
+            ) : null}
+          </div>
           <p className="mt-0.5 text-[13px] leading-relaxed text-slate-500">{card.oneLiner}</p>
         </div>
       </div>
