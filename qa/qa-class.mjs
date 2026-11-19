@@ -27,9 +27,18 @@ const ctx = await browser.newContext({
 });
 const page = await ctx.newPage();
 const consoleErrors = [];
+const badResponses = [];
 page.on('pageerror', (e) => consoleErrors.push(String(e)));
 page.on('console', (m) => {
   if (m.type() === 'error') consoleErrors.push(m.text());
+});
+page.on('response', (r) => {
+  const u = r.url();
+  // SPA 딥링크는 GitHub Pages 404.html fallback 이라 문서 요청의 404 는 정상입니다
+  const isAppDocument = r.request().resourceType() === 'document' && /\/(works|hints|admin|game|shop|study)(\/|$)/.test(u);
+  if (r.status() >= 400 && u.startsWith(BASE) && !u.includes('favicon') && !isAppDocument) {
+    badResponses.push(`${r.status()} ${u}`);
+  }
 });
 
 async function overflowCheck(label) {
@@ -254,7 +263,17 @@ for (const w of [768, 1280]) {
   }
 }
 
+// ------------------------------ 딥링크(404 fallback) ------------------------------
+const dl = await page.context().newPage();
+const dlResp = await dl.goto(BASE + 'works', { waitUntil: 'domcontentloaded' });
+await dl.waitForTimeout(1200);
+const dlHasApp = (await dl.locator('[data-testid="student-stu-seoyeon"]').count()) > 0 || (await dl.locator('text=라피네 클래스').count()) > 0;
+dlHasApp ? ok('새로고침/딥링크 진입 (/works)', `HTTP ${dlResp?.status()}`) : fail('딥링크 진입');
+await dl.close();
+
 // ------------------------------- 오류 로그 -------------------------------
+if (badResponses.length) fail('정적 자산/응답 오류', badResponses.slice(0, 3).join(' | '));
+else ok('정적 자산 응답 정상 (4xx 없음)');
 const realErrors = consoleErrors.filter(
   (e) => !/favicon|manifest|404|Download the React DevTools/i.test(e) && !/Failed to load resource/.test(e)
 );

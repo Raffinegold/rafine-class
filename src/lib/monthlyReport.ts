@@ -125,7 +125,7 @@ export function buildMonthlyReport(student: Student, month: string): MonthlyRepo
       `이번 달에는 ${works
         .slice(0, 2)
         .map((w) => `‘${w.title}’`)
-        .join(', ')}을 완성하며 만들기의 마무리까지 경험했습니다. 결과물을 끝까지 붙잡고 완성한 경험이 다음 작품의 자신감으로 이어집니다.`
+        .join(', ')} 작품을 완성하며 만들기의 마무리까지 경험했습니다. 결과물을 끝까지 붙잡고 완성한 경험이 다음 작품의 자신감으로 이어집니다.`
     );
   } else {
     counselor.push(
@@ -134,9 +134,12 @@ export function buildMonthlyReport(student: Student, month: string): MonthlyRepo
   }
   if (memos.length) {
     counselor.push(
-      `수업 기록에서 ${kidName} 학생의 강점은 ${
+      `이번 달 수업 기록에서 ${kidName} 학생의 강점이 또렷하게 보였습니다 — ${
         uniqueStrengths[0] ?? '차분히 끝까지 시도하는 태도'
-      }로 나타났고, 보완할 지점은 ${uniqueImprovements[0] ?? '한 번에 하나씩 마무리하기'}입니다.`
+      }.`
+    );
+    counselor.push(
+      `반대로 ${uniqueImprovements[0] ?? '한 번에 하나씩 마무리하기'} 부분은 다음 수업에서 함께 연습하려 합니다.`
     );
   }
   if (nextWeeks.length) {
