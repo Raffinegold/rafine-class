@@ -1,0 +1,364 @@
+import { useSyncExternalStore } from 'react';
+import { defaultTrackFor, type Track } from './curriculum';
+import { todayStr, uid } from './util';
+
+/**
+ * 라피네 클래스 전용 데이터 (학생 관리 · 24주 진도 · 작품 · 수업 메모)
+ * - localStorage 에 영구 저장합니다. 원장님 브라우저에 그대로 남습니다.
+ * - 기존 영단어/코딩/캐시 데이터(store)는 그대로 두고, 클래스 기능만 이 저장소를 씁니다.
+ */
+
+export interface ClassProfile {
+  student_id: string;
+  track: Track;
+  /** 기질 코드 RC-XXXX (없으면 빈 문자열) */
+  code: string;
+}
+
+export interface LessonMemo {
+  id: string;
+  student_id: string;
+  date: string; // YYYY-MM-DD
+  made: string; // 오늘 만든 것
+  good: string; // 잘한 점
+  todo: string; // 아쉬운 점 · 보완할 점
+}
+
+export interface Work {
+  id: string;
+  student_id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  tool: string;
+  comment: string;
+  link: string;
+}
+
+interface DB {
+  profiles: Record<string, { track: Track; code: string }>;
+  memos: LessonMemo[];
+  works: Work[];
+  done: Record<string, number[]>;
+}
+
+const KEY = 'rafine-class-db-v1';
+
+function seed(): DB {
+  const profiles: DB['profiles'] = {
+    'stu-seoyeon': { track: 'roblox', code: 'RC-14E1' },
+    'stu-junwoo': { track: 'python', code: 'RC-22F6' },
+    'stu-haeun': { track: 'scratch', code: 'RC-31E2' },
+    'stu-minjun': { track: 'unity', code: 'RC-43A8' },
+    'stu-yujin': { track: 'tosel', code: 'RC-12B4' },
+  };
+  const memos: LessonMemo[] = [
+    {
+      id: 'memo-sy-3',
+      student_id: 'stu-seoyeon',
+      date: '2026-11-18',
+      made: '움직이는 발판 3개와 떨어지는 지점을 만들었어요',
+      good: '실패한 이유를 끝까지 찾아내고 스스로 고쳤어요',
+      todo: '테스트 플레이 전에 "오늘의 도착지"를 먼저 정하기',
+    },
+    {
+      id: 'memo-sy-2',
+      student_id: 'stu-seoyeon',
+      date: '2026-11-12',
+      made: '터치하면 점수가 오르는 파트와 점수 화면을 붙였어요',
+      good: '점수 규칙을 자기 말로 설명했어요',
+      todo: '터치가 두 번 실행되는지 확인하는 습관',
+    },
+    {
+      id: 'memo-sy-1',
+      student_id: 'stu-seoyeon',
+      date: '2026-11-05',
+      made: '장애물 코스 첫 맵을 파트 12개로 만들었어요',
+      good: '좌표를 직접 고치며 길을 만들었어요',
+      todo: '저장을 자주 누르기 — 작업이 날아가지 않게',
+    },
+    {
+      id: 'memo-sy-oct',
+      student_id: 'stu-seoyeon',
+      date: '2026-10-22',
+      made: '스튜디오 조작과 파트 색·재질 바꾸기를 익혔어요',
+      good: '새 도구를 두려움 없이 먼저 눌러 봤어요',
+      todo: '마무리 3분을 정해 두고 끝내기',
+    },
+    {
+      id: 'memo-jw-2',
+      student_id: 'stu-junwoo',
+      date: '2026-11-13',
+      made: '숫자 맞히기 게임을 5번 기회로 완성했어요',
+      good: '친구에게 규칙을 설명하며 스스로 정리했어요',
+      todo: 'while 조건과 끝나는 시점을 더 분명하게',
+    },
+    {
+      id: 'memo-jw-1',
+      student_id: 'stu-junwoo',
+      date: '2026-11-06',
+      made: 'input으로 숫자를 받아 비교하는 코드를 짰어요',
+      good: '오류 메시지를 읽고 스스로 고쳤어요',
+      todo: '변수 이름을 뜻이 보이게 짓기',
+    },
+    {
+      id: 'memo-he-2',
+      student_id: 'stu-haeun',
+      date: '2026-11-14',
+      made: '점수 변수와 게임오버 화면을 만들었어요',
+      good: '점수 변수를 스스로 만들어 봤어요',
+      todo: '복제본이 쌓이지 않게 정리하기',
+    },
+    {
+      id: 'memo-he-1',
+      student_id: 'stu-haeun',
+      date: '2026-11-07',
+      made: '고양이가 아이템을 피하는 미니게임을 만들었어요',
+      good: '블록을 먼저 눌러 보며 배우는 힘이 좋아요',
+      todo: '마지막 3분에 마무리하고 끝내기',
+    },
+    {
+      id: 'memo-mj-1',
+      student_id: 'stu-minjun',
+      date: '2026-11-08',
+      made: '굴러가는 공을 키보드로 조작했어요',
+      good: '물리 값을 끝까지 바꿔 가며 시도했어요',
+      todo: '씬 저장 위치를 확인하고 씬 이름 붙이기',
+    },
+  ];
+  const works: Work[] = [
+    {
+      id: 'work-sy-2',
+      student_id: 'stu-seoyeon',
+      title: '우주 탈출 미로',
+      date: '2026-11-18',
+      tool: '로블록스 스튜디오',
+      comment: '움직이는 발판을 피해 끝까지 가면 이기는 게임',
+      link: 'https://www.roblox.com/',
+    },
+    {
+      id: 'work-sy-1',
+      student_id: 'stu-seoyeon',
+      title: '점수 오르는 장애물 코스',
+      date: '2026-11-12',
+      tool: '로블록스 스튜디오',
+      comment: '닿으면 점수가 오르는 파트를 5개 숨겨 두었어요',
+      link: '',
+    },
+    {
+      id: 'work-jw-1',
+      student_id: 'stu-junwoo',
+      title: '숫자 맞히기 게임',
+      date: '2026-11-13',
+      tool: '파이썬',
+      comment: '1~50 사이 숫자를 5번 안에 맞히는 콘솔 게임',
+      link: '',
+    },
+    {
+      id: 'work-he-1',
+      student_id: 'stu-haeun',
+      title: '고양이 피하기',
+      date: '2026-11-14',
+      tool: '스크래치',
+      comment: '떨어지는 사과를 피하는 30초 게임',
+      link: 'https://scratch.mit.edu/',
+    },
+  ];
+  const done: DB['done'] = {
+    'stu-seoyeon': [1, 2, 3, 4, 5, 6, 7],
+    'stu-junwoo': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    'stu-haeun': [1, 2, 3, 4, 5],
+    'stu-minjun': [1, 2, 3],
+    'stu-yujin': [1, 2],
+  };
+  return { profiles, memos, works, done };
+}
+
+function load(): DB {
+  if (typeof localStorage === 'undefined') return seed();
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return seed();
+    const parsed = JSON.parse(raw) as Partial<DB>;
+    return {
+      profiles: parsed.profiles ?? {},
+      memos: parsed.memos ?? [],
+      works: parsed.works ?? [],
+      done: parsed.done ?? {},
+    };
+  } catch {
+    return seed();
+  }
+}
+
+class ClassStore {
+  private db: DB = load();
+  version = 0;
+  private listeners = new Set<() => void>();
+
+  subscribe = (fn: () => void) => {
+    this.listeners.add(fn);
+    return () => {
+      this.listeners.delete(fn);
+    };
+  };
+
+  getVersion = () => this.version;
+
+  private commit() {
+    this.version += 1;
+    try {
+      localStorage.setItem(KEY, JSON.stringify(this.db));
+    } catch {
+      /* 저장 공간이 없어도 화면은 계속 동작 */
+    }
+    this.listeners.forEach((fn) => fn());
+  }
+
+  /* ----------------------------- 학생별 설정 ----------------------------- */
+
+  profile(studentId: string, codingLevel?: string): ClassProfile {
+    const saved = this.db.profiles[studentId];
+    return {
+      student_id: studentId,
+      track: saved?.track ?? defaultTrackFor(codingLevel),
+      code: saved?.code ?? '',
+    };
+  }
+
+  setProfile(studentId: string, patch: { track?: Track; code?: string }) {
+    const cur = this.profile(studentId);
+    this.db.profiles[studentId] = {
+      track: patch.track ?? cur.track,
+      code: patch.code !== undefined ? patch.code.trim().toUpperCase() : cur.code,
+    };
+    this.commit();
+  }
+
+  /* ------------------------------ 수업 메모 ------------------------------ */
+
+  memosFor(studentId: string): LessonMemo[] {
+    return this.db.memos
+      .filter((m) => m.student_id === studentId)
+      .sort((a, b) => (a.date === b.date ? b.id.localeCompare(a.id) : b.date.localeCompare(a.date)));
+  }
+
+  memosInMonth(studentId: string, month: string): LessonMemo[] {
+    return this.memosFor(studentId).filter((m) => m.date.startsWith(month));
+  }
+
+  addMemo(input: { student_id: string; date: string; made: string; good: string; todo: string }): LessonMemo {
+    const memo: LessonMemo = {
+      id: uid('memo'),
+      student_id: input.student_id,
+      date: input.date || todayStr(),
+      made: input.made.trim(),
+      good: input.good.trim(),
+      todo: input.todo.trim(),
+    };
+    this.db.memos = [memo, ...this.db.memos];
+    this.commit();
+    return memo;
+  }
+
+  deleteMemo(id: string) {
+    this.db.memos = this.db.memos.filter((m) => m.id !== id);
+    this.commit();
+  }
+
+  /* ------------------------------ 작품 보관함 ----------------------------- */
+
+  worksFor(studentId: string): Work[] {
+    return this.db.works
+      .filter((w) => w.student_id === studentId)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  worksInMonth(studentId: string, month: string): Work[] {
+    return this.worksFor(studentId).filter((w) => w.date.startsWith(month));
+  }
+
+  addWork(input: Omit<Work, 'id'>): Work {
+    const work: Work = {
+      ...input,
+      id: uid('work'),
+      title: input.title.trim(),
+      comment: input.comment.trim(),
+      link: input.link.trim(),
+      date: input.date || todayStr(),
+    };
+    this.db.works = [work, ...this.db.works];
+    this.commit();
+    return work;
+  }
+
+  deleteWork(id: string) {
+    this.db.works = this.db.works.filter((w) => w.id !== id);
+    this.commit();
+  }
+
+  /* ------------------------------ 24주 진도 ------------------------------ */
+
+  doneWeeks(studentId: string): number[] {
+    return (this.db.done[studentId] ?? []).slice().sort((a, b) => a - b);
+  }
+
+  isDone(studentId: string, week: number): boolean {
+    return (this.db.done[studentId] ?? []).includes(week);
+  }
+
+  toggleWeek(studentId: string, week: number) {
+    const cur = new Set(this.db.done[studentId] ?? []);
+    if (cur.has(week)) cur.delete(week);
+    else cur.add(week);
+    this.db.done[studentId] = Array.from(cur).sort((a, b) => a - b);
+    this.commit();
+  }
+
+  setWeekDone(studentId: string, week: number, done: boolean) {
+    const cur = new Set(this.db.done[studentId] ?? []);
+    if (done) cur.add(week);
+    else cur.delete(week);
+    this.db.done[studentId] = Array.from(cur).sort((a, b) => a - b);
+    this.commit();
+  }
+
+  /** 다음에 할 주차 (1~24, 모두 끝났으면 25) */
+  nextWeek(studentId: string): number {
+    const done = new Set(this.doneWeeks(studentId));
+    for (let w = 1; w <= 24; w += 1) if (!done.has(w)) return w;
+    return 25;
+  }
+}
+
+export const classStore = new ClassStore();
+
+export function useClassStore() {
+  useSyncExternalStore(classStore.subscribe, classStore.getVersion, classStore.getVersion);
+  return classStore;
+}
+
+export function monthKey(date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function shiftMonth(month: string, delta: number): string {
+  const [y, m] = month.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1, 12);
+  return monthKey(d);
+}
+
+export function monthLabel(month: string): string {
+  const [y, m] = month.split('-').map(Number);
+  return `${y}년 ${m}월`;
+}
+
+/** 오늘 기준 남은 개월 목록 (최근 6개월) — 리포트 월 선택용 */
+export function recentMonths(count = 6): string[] {
+  const out: string[] = [];
+  const now = new Date();
+  for (let i = 0; i < count; i += 1) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1, 12);
+    out.push(monthKey(d));
+  }
+  return out;
+}
