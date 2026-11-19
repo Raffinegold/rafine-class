@@ -8,3 +8,6 @@ dist-ssr
 qa/*.png
 *.tsbuildinfo
 qa/*_report.json
+
+# gh-pages 배포용 임시 worktree
+.ghp-tmp/

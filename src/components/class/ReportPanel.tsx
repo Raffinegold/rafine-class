@@ -132,12 +132,14 @@ export default function ReportPanel({ student, onGoMemo }: { student: Student; o
               {report.works.map((w) => (
                 <li key={w.id} className="overflow-hidden rounded-2xl bg-slate-50">
                   {w.photo ? (
-                    <img
-                      src={w.photo}
-                      alt={`${w.title} 작품 사진`}
-                      data-testid={`report-work-photo-${w.id}`}
-                      className="aspect-[16/10] w-full object-cover"
-                    />
+                    <div className="overflow-hidden bg-slate-100">
+                      <img
+                        src={w.photo}
+                        alt={`${w.title} 작품 사진`}
+                        data-testid={`report-work-photo-${w.id}`}
+                        className="h-44 w-full object-cover sm:h-52 print:h-40"
+                      />
+                    </div>
                   ) : null}
                   <div className="px-4 py-3">
                     <p className="text-[14px] font-extrabold text-slate-800">{w.title}</p>

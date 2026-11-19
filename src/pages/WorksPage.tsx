@@ -116,13 +116,15 @@ export default function WorksPage() {
             works.map((w) => (
               <Card key={w.id} className="space-y-2 overflow-hidden" data-testid={`work-${w.id}`}>
                 {w.photo ? (
-                  <img
-                    src={w.photo}
-                    alt={`${w.title} 작품 사진`}
-                    data-testid={`work-photo-${w.id}`}
-                    className="-mx-5 -mt-5 mb-1 aspect-[4/3] w-[calc(100%+2.5rem)] max-w-none object-cover"
-                    loading="lazy"
-                  />
+                  <div className="-mx-5 -mt-5 mb-1 overflow-hidden rounded-t-3xl bg-slate-100">
+                    <img
+                      src={w.photo}
+                      alt={`${w.title} 작품 사진`}
+                      data-testid={`work-photo-${w.id}`}
+                      className="h-48 w-full object-cover sm:h-56"
+                      loading="lazy"
+                    />
+                  </div>
                 ) : null}
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">

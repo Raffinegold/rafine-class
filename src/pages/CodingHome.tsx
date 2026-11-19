@@ -280,7 +280,8 @@ export default function CodingHome() {
                     ))}
                   </div>
                   <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
-                    오늘 적립 {store.todayCashEarned(student.id)} / {store.cashDailyLimit()}원 · 남은 금액은 영어 학습과 나눠 써요.
+                    오늘 적립 {store.todayCashEarned(student.id)} / {store.cashDailyLimit()}원
+                    {student.enabled_subjects.includes('english') ? ' · 남은 금액은 영어 학습과 나눠 써요.' : ' · 상점에서 기프티콘으로 바꿀 수 있어요.'}
                   </p>
                 </Card>
 
