@@ -15,9 +15,9 @@ export default function MindPanel({ student }: { student: Student }) {
 
   useEffect(() => {
     setDraft(cls.profile(student.id, student.coding_level).code);
-    // 학생이 바뀔 때만 입력값을 새로 채웁니다
+    // 학생이 바뀌거나, 정보 수정 모달에서 코드가 바뀌면 입력값을 새로 채웁니다
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student.id]);
+  }, [student.id, profile.code]);
 
   const reading = useMemo(() => (draft.trim() ? parseMindCode(draft) : null), [draft]);
   const valid = reading && reading.ok ? reading : null;
