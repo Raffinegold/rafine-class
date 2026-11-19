@@ -141,7 +141,7 @@ export default function CodingHome() {
                     <button
                       onClick={() => navigate('/game')}
                       data-testid="coding-go-game"
-                      className="rounded-2xl border border-white/25 bg-white/10 px-4 py-3 text-sm font-semibold text-white/90 hover:bg-white/20"
+                      className="rounded-2xl border border-white/30 bg-white/10 px-4 py-3 text-sm font-bold text-white hover:bg-white/20"
                     >
                       🎮 코딩 게임 하기
                     </button>

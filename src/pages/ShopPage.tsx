@@ -78,7 +78,7 @@ export default function ShopPage() {
           </div>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <Button data-testid="shop-go-game" variant="sun" className="flex-1" onClick={() => navigate('/game')}>
-              🃏 짝맞추기로 더 모으기
+              🎮 게임으로 더 모으기
             </Button>
             <p className="self-center text-[11px] text-white/70">
               {limit - earnedToday > 0

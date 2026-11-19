@@ -79,7 +79,7 @@ export function DailyCashCard({
         <Bar ratio={limit > 0 ? earned / limit : 1} tone={remaining === 0 ? 'sun' : earned > 0 ? 'mint' : 'brand'} />
       </div>
       <p className="mt-1.5 text-[10.5px] leading-relaxed text-slate-400">
-        {note ?? `영어·코딩 게임이 같은 지갑을 써요. 하루 최대 ${limit}원, 다 채우면 연습 모드로 계속 놀 수 있어요.`}
+        {note ?? `게임으로 모은 캐시는 한 지갑에 모여요. 하루 최대 ${limit}원, 다 채우면 연습 모드로 계속 놀 수 있어요.`}
       </p>
     </div>
   );

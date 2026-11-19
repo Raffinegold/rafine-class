@@ -209,7 +209,7 @@ function CodingMenu({
       ) : null}
 
       <div className="flex items-center justify-between rounded-2xl bg-white/70 px-3 py-2">
-        <span className="text-[10.5px] text-slate-500">영어·코딩 공용 지갑</span>
+        <span className="text-[10.5px] text-slate-500">캐시 지갑</span>
         <Badge tone={earnedToday >= limit ? 'sun' : 'mint'}>{earnedToday >= limit ? '연습 모드' : `${limit - earnedToday}원 남음`}</Badge>
       </div>
     </div>
