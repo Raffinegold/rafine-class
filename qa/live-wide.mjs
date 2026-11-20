@@ -31,6 +31,7 @@ for (const [w, h] of [
   [390, 844],
   [820, 1180],
   [1440, 900],
+  [1920, 1080],
 ]) {
   console.log(`▶ ${w}px`);
   const ctx = await browser.newContext({ viewport: { width: w, height: h } });

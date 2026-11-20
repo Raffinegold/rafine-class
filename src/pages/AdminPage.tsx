@@ -75,7 +75,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen pb-safe">
       <header className="sticky top-0 z-30 border-b border-white/70 bg-white/85 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3 md:max-w-6xl md:px-6 lg:max-w-7xl">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3 md:max-w-6xl md:px-6 lg:max-w-7xl 2xl:max-w-[1500px]">
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-items-center rounded-2xl bg-brand-600 text-base text-white shadow-soft">📚</span>
             <div>
@@ -107,7 +107,7 @@ export default function AdminPage() {
             </button>
           </div>
         </div>
-        <div className="mx-auto hidden w-full max-w-3xl gap-1 px-4 pb-2 md:flex md:max-w-6xl md:px-6 lg:max-w-7xl">
+        <div className="mx-auto hidden w-full max-w-3xl gap-1 px-4 pb-2 md:flex md:max-w-6xl md:px-6 lg:max-w-7xl 2xl:max-w-[1500px]">
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -126,7 +126,7 @@ export default function AdminPage() {
       </header>
 
       <DebugPanel />
-      <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-4 md:max-w-6xl md:px-6 md:pb-10 lg:max-w-7xl">
+      <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-4 md:max-w-6xl md:px-6 md:pb-10 lg:max-w-7xl 2xl:max-w-[1500px]">
         {tab === 'students' ? <StudentsTab /> : null}
         {tab === 'words' ? <WordsTab /> : null}
         {tab === 'shop' ? <ShopAdminTab /> : null}

@@ -120,8 +120,8 @@ export function cn(...parts: Array<string | false | null | undefined>): string {
  *  · PAGE_W_WIDE — 수업 중 띄워 보거나 관리하는 화면 (태블릿 6xl · PC 7xl)
  * 헤더·하단 탭도 같은 폭을 써서 넓은 화면에서 좁게 떠 보이지 않게 맞춥니다.
  */
-export const PAGE_W = 'mx-auto w-full max-w-3xl px-4 md:max-w-5xl md:px-6 lg:max-w-6xl';
-export const PAGE_W_WIDE = 'mx-auto w-full max-w-3xl px-4 md:max-w-6xl md:px-6 lg:max-w-7xl';
+export const PAGE_W = 'mx-auto w-full max-w-3xl px-4 md:max-w-5xl md:px-6 lg:max-w-6xl 2xl:max-w-[1360px]';
+export const PAGE_W_WIDE = 'mx-auto w-full max-w-3xl px-4 md:max-w-6xl md:px-6 lg:max-w-7xl 2xl:max-w-[1500px]';
 
 export function levenshtein(a: string, b: string): number {
   const m = a.length;

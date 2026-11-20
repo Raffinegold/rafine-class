@@ -33,7 +33,7 @@ export default function StudentNav({ active }: { active: StudentTabKey }) {
       className="fixed inset-x-0 bottom-0 z-30 border-t border-white bg-white/95 backdrop-blur"
       data-testid="student-nav"
     >
-      <div className="mx-auto flex w-full max-w-3xl items-stretch justify-around px-3 pb-safe pt-2 md:max-w-5xl md:justify-center md:gap-1.5 md:px-6 md:pb-3 md:pt-2.5 lg:max-w-6xl">
+      <div className="mx-auto flex w-full max-w-3xl items-stretch justify-around px-3 pb-safe pt-2 md:max-w-5xl md:justify-center md:gap-1.5 md:px-6 md:pb-3 md:pt-2.5 lg:max-w-6xl 2xl:max-w-[1360px]">
         {ITEMS.map((item) => (
           <button
             key={item.key}

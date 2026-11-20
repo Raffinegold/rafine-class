@@ -57,7 +57,7 @@ export default function ReviewHintsPage() {
         }
       />
 
-      <main className="mx-auto w-full max-w-3xl px-4 pb-32 pt-5 md:max-w-5xl md:px-6 md:pb-16 lg:max-w-6xl">
+      <main className="mx-auto w-full max-w-3xl px-4 pb-32 pt-5 md:max-w-5xl md:px-6 md:pb-16 lg:max-w-6xl 2xl:max-w-[1360px]">
         {highlight ? (
           <section
             data-testid="hint-week-highlight"
