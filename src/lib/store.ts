@@ -150,7 +150,13 @@ class VocaStore {
         this.mode = 'supabase';
         const session = await this.client.auth.getSession();
         this.adminEmail = session.data.session?.user?.email ?? null;
-        await this.loadCloud();
+        // 로그인 전(anon)에는 students 등 개인정보 테이블을 읽을 수 없습니다.
+        // 그 실패로 앱 전체를 데모 모드로 떨어뜨리지 않고, 로그인 후에 다시 읽습니다.
+        try {
+          await this.loadCloud();
+        } catch (err) {
+          console.warn('[voca] 로그인 전 클라우드 읽기 보류 — 로그인 후 다시 불러옵니다', err);
+        }
         this.watchCloud();
         this.emit();
         return;
