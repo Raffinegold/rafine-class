@@ -947,3 +947,349 @@ grant execute on function public.student_coding_bundle(text) to anon, authentica
 --      where email = 'wonjang@example.com';
 --  3) 2단계 인증(TOTP)을 켜 두세요. service_role 키는 절대 브라우저에 넣지 않습니다.
 -- ============================================================================
+
+-- ============================================================================
+--  16) 학생 참고 자료실 · 선생님 수업안 · 학생별 배정 (2026-11-20)
+--      · materials            : 차시별 자료 (학생용 내용 / 교사용 수업안 / 정답 분리)
+--      · material_assignments : 학생별 과정·현재 주차·회차 배정
+--      · material_extra_assignments : 특정 학생에게만 따로 배정한 자료
+--      · material_views       : 학생 열람·완료 기록
+--      핵심 규칙 — teacher_guide / answer_code 는 학생 RPC 결과에 절대 담지 않습니다.
+--  여러 번 실행해도 되도록 if not exists / drop policy if exists 를 씁니다.
+-- ============================================================================
+
+create table if not exists public.materials (
+  id uuid primary key default gen_random_uuid(),
+  seed_key text unique,                       -- 시드 자료 갱신용 키 (직접 등록한 자료는 null)
+  kind text not null default 'theory',
+  title text not null,
+  track text,                                 -- null = 전 트랙
+  week smallint,                              -- 1~24, null = 주차 무관
+  session smallint,                           -- 1 = 이론+만들기 / 2 = 마무리·수정·업그레이드
+  class_name text,                            -- null = 전체 반
+  summary text,
+  student_content jsonb not null default '{}'::jsonb, -- 학생 화면용(목표·개념·따라하기·힌트·미션·자가점검)
+  teacher_guide jsonb,                        -- 새 선생님용 수업안(비유·설명 순서·AI 코칭·자주 나는 에러)
+  answer_code text,                           -- 정답 코드 — 학생 화면 노출 금지
+  ai_tip text,                                -- AI 틈틈이 힌트 (학생에게 보이는 문구)
+  image_url text,
+  link_url text,
+  code_lang text default 'python',
+  published boolean not null default false,
+  sort_no smallint not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint materials_kind_check check (kind in ('theory', 'code', 'image', 'link', 'upgrade')),
+  constraint materials_track_check check (track is null or track in ('scratch', 'python', 'roblox', 'unity', 'tosel')),
+  constraint materials_week_check check (week is null or (week between 1 and 24)),
+  constraint materials_session_check check (session is null or session in (1, 2))
+);
+
+create index if not exists materials_lookup on public.materials (track, week, session)
+  where published;
+create index if not exists materials_week_idx on public.materials (week, session, sort_no);
+
+-- 학생별 배정 — 과정(track) · 현재 주차(week) · 회차(session) 숫자
+create table if not exists public.material_assignments (
+  student_id uuid primary key references public.students(id) on delete cascade,
+  track text,
+  week smallint,
+  session smallint,
+  memo text,                                  -- 원장님 메모 (학생에게 보이지 않음)
+  updated_at timestamptz not null default now(),
+  constraint material_assignments_track_check check (track is null or track in ('scratch', 'python', 'roblox', 'unity', 'tosel')),
+  constraint material_assignments_week_check check (week is null or (week between 1 and 24)),
+  constraint material_assignments_session_check check (session is null or session in (1, 2))
+);
+
+-- 반 전체 자료와 별개로 특정 학생에게만 붙이는 자료
+create table if not exists public.material_extra_assignments (
+  material_id uuid references public.materials(id) on delete cascade,
+  student_id uuid references public.students(id) on delete cascade,
+  assigned_at timestamptz not null default now(),
+  primary key (material_id, student_id)
+);
+
+-- 학생 열람 · 완료 기록
+create table if not exists public.material_views (
+  student_id uuid references public.students(id) on delete cascade,
+  material_id uuid references public.materials(id) on delete cascade,
+  opened_at timestamptz not null default now(),
+  done_at timestamptz,
+  primary key (student_id, material_id)
+);
+create index if not exists material_views_material_idx on public.material_views (material_id);
+
+alter table public.materials enable row level security;
+alter table public.material_assignments enable row level security;
+alter table public.material_extra_assignments enable row level security;
+alter table public.material_views enable row level security;
+
+-- anon 은 직접 접근 불가 (학생은 아래 RPC 만 사용), 원장님(authenticated + role=admin)은 전권
+revoke all on public.materials from anon;
+revoke all on public.material_assignments from anon;
+revoke all on public.material_extra_assignments from anon;
+revoke all on public.material_views from anon;
+grant select, insert, update, delete on public.materials to authenticated;
+grant select, insert, update, delete on public.material_assignments to authenticated;
+grant select, insert, update, delete on public.material_extra_assignments to authenticated;
+grant select, insert, update, delete on public.material_views to authenticated;
+
+drop policy if exists admin_all_materials on public.materials;
+create policy admin_all_materials on public.materials for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists admin_all_material_assignments on public.material_assignments;
+create policy admin_all_material_assignments on public.material_assignments for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists admin_all_material_extras on public.material_extra_assignments;
+create policy admin_all_material_extras on public.material_extra_assignments for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists admin_all_material_views on public.material_views;
+create policy admin_all_material_views on public.material_views for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+-- 실시간 구독 (이미 들어가 있으면 통과)
+do $$
+begin
+  alter publication supabase_realtime add table public.materials;
+exception
+  when duplicate_object then null;
+  when undefined_object then null;
+end $$;
+do $$
+begin
+  alter publication supabase_realtime add table public.material_views;
+exception
+  when duplicate_object then null;
+  when undefined_object then null;
+end $$;
+do $$
+begin
+  alter publication supabase_realtime add table public.material_assignments;
+exception
+  when duplicate_object then null;
+  when undefined_object then null;
+end $$;
+
+-- ---------------------------------------------------------------------------
+--  학생용 RPC — 토큰이 유효할 때만, 교사용 필드(teacher_guide·answer_code) 제외
+-- ---------------------------------------------------------------------------
+create or replace function public.student_materials(p_token text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_student public.students%rowtype;
+  v_assign public.material_assignments%rowtype;
+  v_track text;
+  v_week smallint;
+  v_session smallint;
+  v_items jsonb;
+begin
+  select s.* into v_student
+    from public.students s
+    join public.student_sessions ss on ss.student_id = s.id
+   where ss.token = p_token and ss.expires_at > now()
+   limit 1;
+  if v_student.id is null then raise exception 'SESSION_INVALID'; end if;
+
+  select * into v_assign from public.material_assignments where student_id = v_student.id;
+  v_track := coalesce(v_assign.track, 'python');
+  v_week := coalesce(v_assign.week, 1);
+  v_session := coalesce(v_assign.session, 1);
+
+  select coalesce(jsonb_agg(item order by (item ->> 'week_sort')::int, (item ->> 'session_sort')::int,
+                                     (item ->> 'sort_no')::int, item ->> 'title'), '[]'::jsonb)
+    into v_items
+    from (
+      select jsonb_build_object(
+               'id', m.id,
+               'kind', m.kind,
+               'title', m.title,
+               'track', m.track,
+               'week', m.week,
+               'session', m.session,
+               'class_name', m.class_name,
+               'summary', m.summary,
+               'student_content', m.student_content,
+               'ai_tip', m.ai_tip,
+               'image_url', m.image_url,
+               'link_url', m.link_url,
+               'code_lang', m.code_lang,
+               'published', m.published,
+               'sort_no', m.sort_no,
+               'week_sort', coalesce(m.week, v_week),
+               'session_sort', coalesce(m.session, v_session),
+               'opened_at', vw.opened_at,
+               'done_at', vw.done_at
+             ) as item
+        from public.materials m
+        left join public.material_views vw
+               on vw.material_id = m.id and vw.student_id = v_student.id
+       where m.published
+         and (m.class_name is null or m.class_name = v_student.class_name)
+         and (
+              (m.track is null or m.track = v_track)
+              or exists (select 1 from public.material_extra_assignments x
+                          where x.material_id = m.id and x.student_id = v_student.id)
+             )
+    ) s;
+
+  return jsonb_build_object(
+    'assignment', jsonb_build_object('track', v_track, 'week', v_week, 'session', v_session),
+    'materials', v_items
+  );
+end;
+$$;
+
+create or replace function public.material_mark(p_token text, p_material_id uuid, p_done boolean)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_student_id uuid;
+begin
+  select ss.student_id into v_student_id
+    from public.student_sessions ss
+   where ss.token = p_token and ss.expires_at > now()
+   limit 1;
+  if v_student_id is null then raise exception 'SESSION_INVALID'; end if;
+
+  if not exists (select 1 from public.materials m where m.id = p_material_id and m.published) then
+    raise exception 'MATERIAL_NOT_FOUND';
+  end if;
+
+  insert into public.material_views (student_id, material_id, opened_at, done_at)
+  values (v_student_id, p_material_id, now(), case when p_done then now() else null end)
+  on conflict (student_id, material_id) do update
+     set done_at = case when p_done then now() else null end;
+
+  return jsonb_build_object('ok', true, 'done', p_done);
+end;
+$$;
+
+-- 학생 기기에서 24주 진도·작품을 읽을 때 (수업 메모·교사 메모는 제외)
+create or replace function public.student_class_bundle(p_token text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_student public.students%rowtype;
+begin
+  select s.* into v_student
+    from public.students s
+    join public.student_sessions ss on ss.student_id = s.id
+   where ss.token = p_token and ss.expires_at > now()
+   limit 1;
+  if v_student.id is null then raise exception 'SESSION_INVALID'; end if;
+
+  return jsonb_build_object(
+    'profile', (select to_jsonb(p) - 'student_id' from public.class_profiles p
+                 where p.student_id = v_student.id),
+    'progress', coalesce((select jsonb_agg(w.week order by w.week) from public.class_progress w
+                           where w.student_id = v_student.id and w.done), '[]'::jsonb),
+    'assignments', coalesce((select jsonb_agg(a) from public.material_assignments a
+                              where a.student_id = v_student.id), '[]'::jsonb),
+    'works', coalesce((select jsonb_agg(to_jsonb(k) order by k.date desc) from public.student_works k
+                        where k.student_id = v_student.id), '[]'::jsonb)
+  );
+end;
+$$;
+
+revoke all on function public.student_materials(text) from public;
+revoke all on function public.material_mark(text, uuid, boolean) from public;
+revoke all on function public.student_class_bundle(text) from public;
+grant execute on function public.student_materials(text) to anon, authenticated;
+grant execute on function public.material_mark(text, uuid, boolean) to anon, authenticated;
+grant execute on function public.student_class_bundle(text) to anon, authenticated;
+
+-- ============================================================================
+--  17) 클래스 데이터 서버 동기화 (2026-11-20) — 24주 진도 · 수업 메모 · 작품 · 소견
+--      localStorage 는 그대로 쓰고(오프라인), 로그인 상태에서는 서버와 함께 맞춥니다.
+-- ============================================================================
+
+create table if not exists public.class_profiles (
+  student_id uuid primary key references public.students(id) on delete cascade,
+  track text,
+  code text,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.class_progress (
+  student_id uuid references public.students(id) on delete cascade,
+  week smallint not null check (week between 1 and 24),
+  done boolean not null default false,
+  updated_at timestamptz not null default now(),
+  primary key (student_id, week)
+);
+
+create table if not exists public.lesson_memos (
+  id uuid primary key default gen_random_uuid(),
+  local_key text,                             -- 앱 localStorage 메모 id (중복 방지)
+  student_id uuid references public.students(id) on delete cascade,
+  date date not null default current_date,
+  made text,
+  good text,
+  todo text,
+  created_at timestamptz not null default now(),
+  unique (student_id, local_key)
+);
+
+create table if not exists public.student_works (
+  id uuid primary key default gen_random_uuid(),
+  local_key text,
+  student_id uuid references public.students(id) on delete cascade,
+  title text not null,
+  date date not null default current_date,
+  tool text,
+  comment text,
+  link text,
+  photo text,                                 -- 작품 사진 (800px JPEG data URL)
+  created_at timestamptz not null default now(),
+  unique (student_id, local_key)
+);
+
+create table if not exists public.report_notes (
+  student_id uuid references public.students(id) on delete cascade,
+  month text not null,                        -- YYYY-MM
+  text text not null,
+  updated_at timestamptz not null default now(),
+  primary key (student_id, month)
+);
+
+alter table public.class_profiles enable row level security;
+alter table public.class_progress enable row level security;
+alter table public.lesson_memos enable row level security;
+alter table public.student_works enable row level security;
+alter table public.report_notes enable row level security;
+
+grant select, insert, update, delete on public.class_profiles to authenticated;
+grant select, insert, update, delete on public.class_progress to authenticated;
+grant select, insert, update, delete on public.lesson_memos to authenticated;
+grant select, insert, update, delete on public.student_works to authenticated;
+grant select, insert, update, delete on public.report_notes to authenticated;
+
+drop policy if exists admin_all_class_profiles on public.class_profiles;
+create policy admin_all_class_profiles on public.class_profiles for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+drop policy if exists admin_all_class_progress on public.class_progress;
+create policy admin_all_class_progress on public.class_progress for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+drop policy if exists admin_all_lesson_memos on public.lesson_memos;
+create policy admin_all_lesson_memos on public.lesson_memos for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+drop policy if exists admin_all_student_works on public.student_works;
+create policy admin_all_student_works on public.student_works for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+drop policy if exists admin_all_report_notes on public.report_notes;
+create policy admin_all_report_notes on public.report_notes for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
