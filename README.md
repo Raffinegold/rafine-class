@@ -75,3 +75,16 @@ node qa/qa-class.mjs
 
 모바일 390×844에서 가로 스크롤 0건, 학생 탭 4개, 게임 10종, 작품 등록, 힌트 아코디언,
 `RC-XXXX` 즉시 해석, 24주 진도 체크, 수업 메모 저장, 월말 리포트 자동 생성·카톡 복사·PDF 저장까지 자동 확인합니다.
+
+---
+
+## 📂 학생 참고 자료실 · 선생님 수업안 (2026-11-20)
+
+원장님이 **과정·주차·회차**를 지정해 자료를 올리면, 학생은 자기 화면에서 바로 그 차시를 따라 만듭니다.
+
+- **학생**: 하단 `📂 자료실` — 배정된 `과정 · N주차 · 1회차/2회차` 카드 → 이론 · 예제 코드 · 업그레이드 미션 · AI 틈틈이 힌트 → “다 봤어요”
+- **원장**: `/admin/tools → 📂 자료실 · 수업안` — 수업안 보기(새 선생님용) · 자료 등록/수정 · 학생 배정 · 열람/완료 확인
+- **보안**: `teacher_guide`(수업안)와 `answer_code`(정답)는 학생 RPC 결과에 담기지 않습니다. anon 키로 테이블 직접 접근도 차단됩니다.
+- **Supabase**: `materials` · `material_assignments` · `material_extra_assignments` · `material_views` + 24주 진도/메모/작품/소견 동기화(`class_*`, `lesson_memos`, `student_works`, `report_notes`)
+
+설정·운영 방법은 **[docs/supabase-setup.md](docs/supabase-setup.md)** 를 보세요.
