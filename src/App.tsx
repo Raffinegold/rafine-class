@@ -12,6 +12,7 @@ import AdminClassPage from './pages/admin/AdminClassPage';
 import AdminPage from './pages/AdminPage';
 import WorksPage from './pages/WorksPage';
 import ReviewHintsPage from './pages/ReviewHintsPage';
+import MaterialsPage from './pages/MaterialsPage';
 import ParentReportPage from './pages/ParentReportPage';
 import { store } from './lib/store';
 
@@ -96,6 +97,14 @@ export default function App() {
               element={
                 <StudentRoute>
                   <ShopPage />
+                </StudentRoute>
+              }
+            />
+            <Route
+              path="/materials"
+              element={
+                <StudentRoute>
+                  <MaterialsPage />
                 </StudentRoute>
               }
             />

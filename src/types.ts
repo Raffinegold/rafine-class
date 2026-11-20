@@ -317,3 +317,84 @@ export interface CodingSession {
   wrong_problem_ids: string[];
   played_at: string;
 }
+
+/* ==========================================================================
+ *  참고 자료실 (2026-11-20)
+ *  - 교사용 필드(teacher_guide·answer_code)는 학생 화면에 절대 내려가지 않습니다.
+ * ========================================================================== */
+
+export type MaterialKind = 'theory' | 'code' | 'image' | 'link' | 'upgrade';
+
+export interface MaterialConceptRow {
+  code: string;
+  mean: string;
+}
+
+export interface MaterialStep {
+  title: string;
+  code?: string;
+  note?: string;
+}
+
+export interface MaterialMission {
+  basic: string;
+  challenge: string;
+  deep: string;
+}
+
+/** 학생 화면에 그대로 그리는 내용 — 정답·교사용 수업안은 여기에 없습니다 */
+export interface MaterialStudentContent {
+  goal?: string;
+  preview?: string;
+  words?: string[];
+  conceptTitle?: string;
+  concept?: MaterialConceptRow[];
+  predict?: { code: string; answer: string };
+  steps?: MaterialStep[];
+  mistakes?: { symptom: string; cause: string }[];
+  hints?: string[];
+  missions?: MaterialMission;
+  selfcheck?: string[];
+  note?: string;
+}
+
+/** 새 선생님이 수업 전에 읽는 강의안 (원장·교사 전용) */
+export interface MaterialTeacherGuide {
+  demo?: string;
+  analogy?: string;
+  board?: { say: string; write: string }[];
+  ai?: { when: string; what: string; prompt?: string; rule?: string }[];
+  errors?: { symptom: string; cause: string; coach: string }[];
+  tips?: string[];
+}
+
+export interface Material {
+  id: string;
+  kind: MaterialKind;
+  title: string;
+  track: string | null;
+  week: number | null;
+  session: 1 | 2 | null;
+  class_name?: string | null;
+  summary?: string | null;
+  student_content: MaterialStudentContent;
+  teacher_guide?: MaterialTeacherGuide | null;
+  answer_code?: string | null;
+  ai_tip?: string | null;
+  image_url?: string | null;
+  link_url?: string | null;
+  code_lang?: string | null;
+  published: boolean;
+  sort_no: number;
+  opened_at?: string | null;
+  done_at?: string | null;
+}
+
+export interface MaterialAssignment {
+  student_id: string;
+  track: string | null;
+  week: number | null;
+  session: 1 | 2 | null;
+  memo?: string | null;
+  updated_at?: string;
+}

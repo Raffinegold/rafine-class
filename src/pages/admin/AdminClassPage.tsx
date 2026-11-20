@@ -33,6 +33,11 @@ export default function AdminClassPage() {
   const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
+    if (store.mode === 'supabase') void cls.pullCloud();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.mode]);
+
+  useEffect(() => {
     if (!activeStudents.length) return;
     if (!activeStudents.some((s) => s.id === selectedId)) setSelectedId(activeStudents[0].id);
   }, [activeStudents, selectedId]);

@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/util';
 
-/** 학생 하단 탭 — 크게 네 개만: 학습 · 내 작품 · 복습 힌트 · 상점 */
-export type StudentTabKey = 'learn' | 'works' | 'hints' | 'shop';
+/** 학생 하단 탭 — 학습 · 자료실 · 내 작품 · 복습 힌트 · 상점 */
+export type StudentTabKey = 'learn' | 'materials' | 'works' | 'hints' | 'shop';
 
 interface NavItem {
   key: StudentTabKey;
@@ -13,6 +13,7 @@ interface NavItem {
 
 const ITEMS: NavItem[] = [
   { key: 'learn', label: '학습', icon: '💻', to: '/' },
+  { key: 'materials', label: '자료실', icon: '📂', to: '/materials' },
   { key: 'works', label: '내 작품', icon: '🎨', to: '/works' },
   { key: 'hints', label: '복습 힌트', icon: '💡', to: '/hints' },
   { key: 'shop', label: '상점', icon: '🎁', to: '/shop' },
@@ -33,7 +34,7 @@ export default function StudentNav({ active }: { active: StudentTabKey }) {
             data-testid={`nav-${item.key}`}
             onClick={() => navigate(item.to)}
             className={cn(
-              'flex flex-1 flex-col items-center gap-1 rounded-3xl py-2.5 text-[12px] font-bold transition',
+              'flex flex-1 flex-col items-center gap-1 rounded-3xl py-2.5 text-[11px] font-bold transition',
               active === item.key ? 'bg-brand-50 text-brand-700' : 'text-slate-400 hover:text-slate-600'
             )}
           >

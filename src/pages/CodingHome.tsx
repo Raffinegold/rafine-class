@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSession, useVocaStore } from '../app-context';
 import StudentNav from '../components/StudentNav';
@@ -6,6 +6,7 @@ import StudentHeader from '../components/StudentHeader';
 import { Badge, Bar, Button, Card, SectionTitle } from '../components/ui';
 import { buildCodingMission, buildCodingReview, CODING_GAME_LIST, CODING_GAME_META, shuffleChoices, type CodingMissionItem } from '../lib/coding';
 import { useClassStore } from '../lib/classStore';
+import { materialStore, useMaterialStore } from '../lib/materialStore';
 import { CURRICULUM, TRACK_META } from '../lib/curriculum';
 import { problemById } from '../data/codingSeed';
 import { sfx } from '../lib/sound';
@@ -21,12 +22,19 @@ type Tab = 'today' | 'wrong';
 export default function CodingHome() {
   const store = useVocaStore();
   const cls = useClassStore();
+  const ms = useMaterialStore();
   const navigate = useNavigate();
   const { student, logout } = useSession();
   const [params] = useSearchParams();
   const tab: Tab = params.get('tab') === 'wrong' ? 'wrong' : 'today';
 
   const [mission, setMission] = useState<{ items: CodingMissionItem[]; mode: 'mission' | 'review' } | null>(null);
+
+  useEffect(() => {
+    if (ms.mode === 'cloud' && store.studentToken) void ms.loadStudentCloud(store.studentToken);
+    if (ms.mode === 'cloud' && store.studentToken) void cls.pullStudentCloud(store.studentToken);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ms.mode, store.studentToken]);
 
   if (!student) return null;
 
@@ -49,6 +57,15 @@ export default function CodingHome() {
   const doneWeeks = cls.doneWeeks(student.id);
   const donePct = Math.round((doneWeeks.length / 24) * 100);
   const nextWeek = cls.nextWeek(student.id);
+  const assignRow = ms.assignment ?? materialStore.localAssignment(student.id);
+  const assignTrack = assignRow?.track ?? profile.track;
+  const assignWeek = Number(assignRow?.week ?? Math.min(nextWeek, 24));
+  const assignSession = Number(assignRow?.session ?? 1) === 2 ? 2 : 1;
+  const materialPool = ms.mode === 'cloud' ? ms.materials : materialStore.localAll();
+  const materialCount = materialPool.filter(
+    (m) => m.published !== false && m.week === assignWeek && (m.track ? m.track === assignTrack : true)
+  ).length;
+  const assignLabel = `${TRACK_META[profile.track].label} ${assignWeek}주차 ${assignSession}회차`;
   const thisWeek = plan.find((w) => w.week === nextWeek);
   const works = cls.worksFor(student.id).filter((w) => !!w.photo);
   const workCount = cls.worksFor(student.id).length;
@@ -225,6 +242,23 @@ export default function CodingHome() {
                       </span>
                     </span>
                     <span className="text-amber-500">›</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate('/materials')}
+                    data-testid="coding-materials-link"
+                    className="mt-2 flex w-full items-center gap-2 rounded-2xl bg-brand-50 px-3 py-2.5 text-left transition active:scale-[0.99] hover:bg-brand-100/70"
+                  >
+                    <span className="text-lg">📂</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12px] font-extrabold text-brand-700">
+                        이번 주 참고자료 · {materialCount}개
+                      </span>
+                      <span className="mt-0.5 block truncate text-[11px] text-brand-700/80">
+                        {assignLabel} — 1회차 이론+만들기 / 2회차 업그레이드
+                      </span>
+                    </span>
+                    <span className="text-brand-500">›</span>
                   </button>
                 </section>
 

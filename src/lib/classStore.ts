@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { supabase } from './supabase';
 import { defaultTrackFor, type Track } from './curriculum';
 import { todayStr, uid } from './util';
 
@@ -237,6 +238,7 @@ class ClassStore {
       code: patch.code !== undefined ? patch.code.trim().toUpperCase() : cur.code,
     };
     this.commit();
+    void this.pushProfile(studentId);
   }
 
   /* ------------------------------ 수업 메모 ------------------------------ */
@@ -262,12 +264,14 @@ class ClassStore {
     };
     this.db.memos = [memo, ...this.db.memos];
     this.commit();
+    void this.pushMemo(memo);
     return memo;
   }
 
   deleteMemo(id: string) {
     this.db.memos = this.db.memos.filter((m) => m.id !== id);
     this.commit();
+    void this.removeMemoCloud(id);
   }
 
   /* ------------------------------ 작품 보관함 ----------------------------- */
@@ -294,12 +298,14 @@ class ClassStore {
     };
     this.db.works = [work, ...this.db.works];
     this.commit();
+    void this.pushWork(work);
     return work;
   }
 
   deleteWork(id: string) {
     this.db.works = this.db.works.filter((w) => w.id !== id);
     this.commit();
+    void this.removeWorkCloud(id);
   }
 
   /* ------------------------------ 24주 진도 ------------------------------ */
@@ -318,6 +324,7 @@ class ClassStore {
     else cur.add(week);
     this.db.done[studentId] = Array.from(cur).sort((a, b) => a - b);
     this.commit();
+    void this.pushWeek(studentId, week, cur.has(week));
   }
 
   setWeekDone(studentId: string, week: number, done: boolean) {
@@ -326,6 +333,7 @@ class ClassStore {
     else cur.delete(week);
     this.db.done[studentId] = Array.from(cur).sort((a, b) => a - b);
     this.commit();
+    void this.pushWeek(studentId, week, done);
   }
 
   /* ------------------------ 월말 리포트 종합 소견 직접 수정 ------------------------ */
@@ -342,6 +350,7 @@ class ClassStore {
     if (next) this.db.counselors[key] = next;
     else delete this.db.counselors[key];
     this.commit();
+    void this.pushCounselor(studentId, month, next);
   }
 
   clearCounselorOverride(studentId: string, month: string) {
@@ -356,6 +365,152 @@ class ClassStore {
     const done = new Set(this.doneWeeks(studentId));
     for (let w = 1; w <= 24; w += 1) if (!done.has(w)) return w;
     return 25;
+  }
+
+
+  /* ---------------------- Supabase 동기화 (2026-11-20) ---------------------- */
+  /** 원장 로그인 상태에서 켭니다. 끄면 지금처럼 localStorage 전용. */
+  cloudEnabled = false;
+
+  private async pushProfile(studentId: string) {
+    if (!this.cloudEnabled || !supabase) return;
+    const p = this.db.profiles[studentId];
+    if (!p) return;
+    const { error } = await supabase
+      .from('class_profiles')
+      .upsert({ student_id: studentId, track: p.track, code: p.code, updated_at: new Date().toISOString() });
+    if (error) console.warn('[class] profile 저장 실패', error.message);
+  }
+
+  private async pushWeek(studentId: string, week: number, done: boolean) {
+    if (!this.cloudEnabled || !supabase) return;
+    const { error } = await supabase
+      .from('class_progress')
+      .upsert({ student_id: studentId, week, done, updated_at: new Date().toISOString() });
+    if (error) console.warn('[class] 진도 저장 실패', error.message);
+  }
+
+  private async pushMemo(m: LessonMemo) {
+    if (!this.cloudEnabled || !supabase) return;
+    const { error } = await supabase.from('lesson_memos').upsert(
+      { local_key: m.id, student_id: m.student_id, date: m.date, made: m.made, good: m.good, todo: m.todo },
+      { onConflict: 'student_id,local_key' }
+    );
+    if (error) console.warn('[class] 메모 저장 실패', error.message);
+  }
+
+  private async removeMemoCloud(id: string) {
+    if (!this.cloudEnabled || !supabase) return;
+    await supabase.from('lesson_memos').delete().eq('local_key', id);
+  }
+
+  private async pushWork(w: Work) {
+    if (!this.cloudEnabled || !supabase) return;
+    const { error } = await supabase.from('student_works').upsert(
+      {
+        local_key: w.id,
+        student_id: w.student_id,
+        title: w.title,
+        date: w.date,
+        tool: w.tool,
+        comment: w.comment,
+        link: w.link,
+        photo: w.photo ?? null,
+      },
+      { onConflict: 'student_id,local_key' }
+    );
+    if (error) console.warn('[class] 작품 저장 실패', error.message);
+  }
+
+  private async removeWorkCloud(id: string) {
+    if (!this.cloudEnabled || !supabase) return;
+    await supabase.from('student_works').delete().eq('local_key', id);
+  }
+
+  private async pushCounselor(studentId: string, month: string, text: string) {
+    if (!this.cloudEnabled || !supabase) return;
+    if (!text) {
+      await supabase.from('report_notes').delete().eq('student_id', studentId).eq('month', month);
+      return;
+    }
+    const { error } = await supabase
+      .from('report_notes')
+      .upsert({ student_id: studentId, month, text, updated_at: new Date().toISOString() });
+    if (error) console.warn('[class] 소견 저장 실패', error.message);
+  }
+
+  /** 원장 로그인 후 서버 데이터를 받아 로컬과 합칩니다 (수업 메모·작품·진도·소견) */
+  async pullCloud(): Promise<void> {
+    if (!supabase) return;
+    this.cloudEnabled = true;
+    const [profiles, progress, memos, works, notes] = await Promise.all([
+      supabase.from('class_profiles').select('*'),
+      supabase.from('class_progress').select('*').eq('done', true),
+      supabase.from('lesson_memos').select('*'),
+      supabase.from('student_works').select('*'),
+      supabase.from('report_notes').select('*'),
+    ]);
+    if (profiles.error) {
+      console.warn('[class] pull 실패', profiles.error.message);
+      return;
+    }
+    (profiles.data ?? []).forEach((p: { student_id: string; track: string | null; code: string | null }) => {
+      this.db.profiles[p.student_id] = { track: (p.track ?? 'python') as Track, code: p.code ?? '' };
+    });
+    (progress.data ?? []).forEach((p: { student_id: string; week: number }) => {
+      const set = new Set(this.db.done[p.student_id] ?? []);
+      set.add(p.week);
+      this.db.done[p.student_id] = Array.from(set).sort((a, b) => a - b);
+    });
+    const memoKeys = new Set(this.db.memos.map((m) => m.id));
+    (memos.data ?? []).forEach(
+      (m: { local_key: string; student_id: string; date: string; made: string; good: string; todo: string }) => {
+        if (!m.local_key || memoKeys.has(m.local_key)) return;
+        this.db.memos.push({ id: m.local_key, student_id: m.student_id, date: m.date, made: m.made, good: m.good, todo: m.todo });
+      }
+    );
+    const workKeys = new Set(this.db.works.map((w) => w.id));
+    (works.data ?? []).forEach(
+      (w: {
+        local_key: string;
+        student_id: string;
+        title: string;
+        date: string;
+        tool: string | null;
+        comment: string | null;
+        link: string | null;
+        photo: string | null;
+      }) => {
+        if (!w.local_key || workKeys.has(w.local_key)) return;
+        this.db.works.push({
+          id: w.local_key,
+          student_id: w.student_id,
+          title: w.title,
+          date: w.date,
+          tool: w.tool ?? '',
+          comment: w.comment ?? '',
+          link: w.link ?? '',
+          photo: w.photo ?? undefined,
+        });
+      }
+    );
+    (notes.data ?? []).forEach((n: { student_id: string; month: string; text: string }) => {
+      this.db.counselors[`${n.student_id}:${n.month}`] = n.text;
+    });
+    this.commit();
+  }
+
+  /** 학생 기기에서 내 진도만 받아옵니다 (수업 메모·교사 메모는 제외) */
+  async pullStudentCloud(token: string): Promise<void> {
+    if (!supabase || !token) return;
+    const { data, error } = await supabase.rpc('student_class_bundle', { p_token: token });
+    if (error || !data) return;
+    const bundle = data as { progress?: number[]; assignments?: { student_id: string }[] };
+    const sid = bundle.assignments?.[0]?.student_id;
+    if (sid && bundle.progress?.length) {
+      this.db.done[sid] = bundle.progress.slice().sort((a, b) => a - b);
+      this.commit();
+    }
   }
 }
 

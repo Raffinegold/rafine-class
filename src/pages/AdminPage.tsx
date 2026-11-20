@@ -3,10 +3,11 @@ import { useSession, useVocaStore } from '../app-context';
 import { Badge, Button, Card, LevelPill, Modal, SectionTitle, useToast } from '../components/ui';
 import { parseWordCsv } from '../lib/csv';
 import { copyText } from '../lib/report';
+import MaterialsPanel from './admin/MaterialsPanel';
 import { LEVEL_META, CODING_LEVELS, CODING_LEVEL_META, type CodingLevel, type Level, type RedemptionRequest, type ShopItem, type Student, type Subject } from '../types';
 import { cn, formatKoTimestamp, todayStr } from '../lib/util';
 
-type Tab = 'students' | 'words' | 'shop';
+type Tab = 'students' | 'words' | 'shop' | 'materials';
 
 /**
  * 관리 도구는 딱 세 가지로만 남깁니다.
@@ -16,6 +17,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'students', label: '학생 · PIN', icon: '🧑‍🎓' },
   { key: 'words', label: '단어장', icon: '📖' },
   { key: 'shop', label: '상점 상품', icon: '🎁' },
+  { key: 'materials', label: '자료실 · 수업안', icon: '📂' },
 ];
 
 /** 수강 과목 선택 3가지 (원장님 화면) — 코딩이 기본, TOSEL 영어는 따로 켭니다 */
@@ -109,6 +111,7 @@ export default function AdminPage() {
         {tab === 'students' ? <StudentsTab /> : null}
         {tab === 'words' ? <WordsTab /> : null}
         {tab === 'shop' ? <ShopAdminTab /> : null}
+        {tab === 'materials' ? <MaterialsPanel /> : null}
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white bg-white/95 backdrop-blur md:hidden">
