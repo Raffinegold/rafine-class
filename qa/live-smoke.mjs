@@ -58,6 +58,9 @@ await step('자료실 진입 · 배정 표시', async () => {
 });
 
 await step('2회차 탭', async () => {
+  // 자료가 다 불러온 뒤에 탭을 누릅니다 (배정 정보가 늦게 오면 회차가 1회차로 되돌아감)
+  await page.getByTestId('material-card').first().waitFor({ timeout: 15000 });
+  await page.waitForTimeout(400);
   await page.getByTestId('session-2').click();
   await page.getByText('업그레이드 미션', { exact: false }).first().waitFor({ timeout: 8000 });
   return '업그레이드 미션 보임';
