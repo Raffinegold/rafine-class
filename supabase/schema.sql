@@ -1293,3 +1293,38 @@ create policy admin_all_student_works on public.student_works for all to authent
 drop policy if exists admin_all_report_notes on public.report_notes;
 create policy admin_all_report_notes on public.report_notes for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
+
+-- ============================================================================
+--  18) 테이블 권한 명시 (2026-11-20)
+--   새 프로젝트에서는 public 스키마 기본 권한이 자동 부여되지 않습니다.
+--   RLS 정책이 실제로 동작하려면 role 에 권한이 있어야 하므로 여기서 한 번에 줍니다.
+--   · anon  : 단어장·상점 상품 읽기만 (나머지는 RPC 전용)
+--   · authenticated : 원장님 계정 — RLS 의 is_admin() 이 실제 접근을 결정
+-- ============================================================================
+grant usage on schema public to anon, authenticated;
+
+grant select on public.word_sets to anon;
+grant select on public.words to anon;
+grant select on public.shop_items to anon;
+
+grant select, insert, update, delete on
+  public.students,
+  public.word_sets,
+  public.words,
+  public.assignments,
+  public.study_logs,
+  public.wrong_notes,
+  public.weekly_reports,
+  public.level_history,
+  public.student_sessions,
+  public.cash_wallets,
+  public.shop_items,
+  public.redemption_requests,
+  public.game_sessions,
+  public.app_settings,
+  public.coding_logs,
+  public.coding_wrong_notes,
+  public.coding_sessions
+to authenticated;
+
+grant usage, select on all sequences in schema public to authenticated;
