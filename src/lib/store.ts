@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase, supabaseReady } from './supabase';
+import { materialStore } from './materialStore';
 import type {
   AppSettings,
   Assignment,
@@ -68,6 +69,26 @@ function clearSavedSession() {
     localStorage.removeItem(SESSION_MIRROR_KEY);
   } catch {
     /* ignore */
+  }
+}
+
+/** 학생 로그인 토큰 (12시간) — 새로고침 후에도 수업자료·학습 데이터를 이어 받기 위해 기기에 남깁니다 */
+const STUDENT_TOKEN_KEY = 'rafine-voca-student-token';
+
+function readSavedStudentToken(): string | null {
+  try {
+    return localStorage.getItem(STUDENT_TOKEN_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+function saveStudentToken(token: string | null) {
+  try {
+    if (token) localStorage.setItem(STUDENT_TOKEN_KEY, token);
+    else localStorage.removeItem(STUDENT_TOKEN_KEY);
+  } catch {
+    /* 저장 실패해도 로그인은 유지 */
   }
 }
 
@@ -185,6 +206,8 @@ class VocaStore {
         // 앱 전체가 같은 Supabase 클라이언트를 씁니다 (두 개를 만들면 로그인 세션이 서로 지워집니다)
         this.client = supabase;
         this.mode = 'supabase';
+        // 학생 로그인 토큰도 기기에 남아 있으면 복원합니다 (새로고침 후 수업자료가 비어 보이지 않게)
+        this.studentToken = readSavedStudentToken();
         let session = await this.client.auth.getSession();
         // 새로고침 후 라이브러리 저장소가 비어 있으면, 기기에 남겨 둔 세션으로 복원합니다.
         if (!session.data.session) {
@@ -208,6 +231,15 @@ class VocaStore {
           console.warn('[voca] 로그인 전 클라우드 읽기 보류 — 로그인 후 다시 불러옵니다', err);
         }
         this.watchCloud();
+        // 복원한 학생 토큰이 있으면 내 학습·수업자료를 먼저 받아 둡니다
+        if (this.studentToken) {
+          try {
+            await this.loadStudentBundle();
+            await materialStore.loadStudentCloud(this.studentToken);
+          } catch (err) {
+            console.warn('[voca] 저장된 학생 토큰으로 불러오기 실패 — 다시 로그인하면 이어집니다', err);
+          }
+        }
         // 로그인/로그아웃 이벤트에서 원장 데이터를 다시 읽습니다 (새로고침 후에도 유지)
         this.client.auth.onAuthStateChange((_event, session) => {
           this.adminEmail = session?.user?.email ?? null;
@@ -518,11 +550,7 @@ class VocaStore {
     const student = (data as any)?.student as Student | undefined;
     if (!token || !student) return null;
     this.studentToken = token;
-    try {
-      localStorage.setItem('rafine-voca-student-token', token);
-    } catch {
-      /* ignore */
-    }
+    saveStudentToken(token);
     await this.loadStudentBundle();
     return this.getStudent(student.id) ?? student;
   }
@@ -1575,9 +1603,15 @@ class VocaStore {
     return this.mode === 'local' && pin === SEED_ADMIN_PIN;
   }
 
+  /** 학생 로그아웃 — 기기에 남긴 토큰도 함께 지웁니다(다른 학생 화면에 이어지지 않게) */
+  clearStudentToken() {
+    this.studentToken = null;
+    saveStudentToken(null);
+  }
+
   async adminSignIn(email: string, password: string): Promise<boolean> {
     if (!this.client || this.mode !== 'supabase') return email.trim() !== '' && password !== '' && this.verifyAdminPin(password);
-    this.studentToken = null;
+    this.clearStudentToken();
     const { data, error } = await this.client.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
     this.adminEmail = data.user?.email ?? null;

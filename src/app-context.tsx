@@ -57,7 +57,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const loginAdmin = useCallback(() => persist({ role: 'admin' }), [persist]);
-  const logout = useCallback(() => persist(null), [persist]);
+  const logout = useCallback(() => {
+    // 학생 토큰도 함께 지웁니다 — 다음 학생 화면에 이전 학생 자료가 이어지지 않게
+    store.clearStudentToken();
+    persist(null);
+  }, [persist]);
 
   const student = useMemo(() => {
     if (session?.role !== 'student' || !session.studentId) return null;
