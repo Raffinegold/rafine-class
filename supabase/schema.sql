@@ -310,7 +310,7 @@ create or replace function public.student_login(p_name text, p_pin text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_student public.students%rowtype;
@@ -351,7 +351,7 @@ create or replace function public.student_bundle(p_token text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_session public.student_sessions%rowtype;
@@ -430,7 +430,7 @@ create or replace function public.student_answer(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_session public.student_sessions%rowtype;
@@ -496,7 +496,7 @@ returns int
 language sql
 stable
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
   select coalesce(
     (select nullif(value ->> 'value', '')::int from public.app_settings where key = 'cash_daily_limit'),
@@ -509,7 +509,7 @@ create or replace function public.ensure_wallet(p_student_id uuid)
 returns public.cash_wallets
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_wallet public.cash_wallets%rowtype;
@@ -541,7 +541,7 @@ create or replace function public.student_game_reward(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_session public.student_sessions%rowtype;
@@ -599,7 +599,7 @@ create or replace function public.student_redeem(p_token text, p_item_id uuid)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_session public.student_sessions%rowtype;
@@ -642,7 +642,7 @@ create or replace function public.admin_handle_redemption(p_id uuid, p_action te
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_request public.redemption_requests%rowtype;
@@ -684,7 +684,7 @@ create or replace function public.admin_set_cash_limit(p_limit int)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_limit int := greatest(0, least(100000, coalesce(p_limit, 50)));
@@ -714,7 +714,7 @@ create or replace function public.admin_create_student(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_student public.students%rowtype;
@@ -753,7 +753,7 @@ create or replace function public.admin_reset_pin(p_student_id uuid, p_pin text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   if not public.is_admin() then
@@ -775,7 +775,7 @@ create or replace function public.cleanup_sessions()
 returns void
 language sql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$ delete from public.student_sessions where expires_at < now(); $$;
 
 -- anon/authenticated 는 테이블 직접 접근 대신 RPC 만 사용
@@ -892,7 +892,7 @@ create or replace function public.admin_set_subjects(p_student_id uuid, p_subjec
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   if not public.is_admin() then raise exception 'FORBIDDEN'; end if;
@@ -908,7 +908,7 @@ create or replace function public.student_coding_bundle(p_token text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_student public.students;
@@ -1081,7 +1081,7 @@ create or replace function public.student_materials(p_token text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_student public.students%rowtype;
@@ -1151,7 +1151,7 @@ create or replace function public.material_mark(p_token text, p_material_id uuid
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_student_id uuid;
@@ -1180,7 +1180,7 @@ create or replace function public.student_class_bundle(p_token text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_student public.students%rowtype;
