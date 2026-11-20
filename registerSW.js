@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/rafine-class/sw.js', { scope: '/rafine-class/' })})}
