@@ -252,7 +252,7 @@ export default function CodingHome() {
                     <span className="text-lg">📂</span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-[12px] font-extrabold text-brand-700">
-                        이번 주 참고자료 · {materialCount}개
+                        이번 주 수업자료 · {materialCount}개
                       </span>
                       <span className="mt-0.5 block truncate text-[11px] text-brand-700/80">
                         {assignLabel} — 1회차 이론+만들기 / 2회차 업그레이드

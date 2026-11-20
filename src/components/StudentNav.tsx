@@ -13,7 +13,7 @@ interface NavItem {
 
 const ITEMS: NavItem[] = [
   { key: 'learn', label: '학습', icon: '💻', to: '/' },
-  { key: 'materials', label: '자료실', icon: '📂', to: '/materials' },
+  { key: 'materials', label: '수업자료', icon: '📂', to: '/materials' },
   { key: 'works', label: '내 작품', icon: '🎨', to: '/works' },
   { key: 'hints', label: '복습 힌트', icon: '💡', to: '/hints' },
   { key: 'shop', label: '상점', icon: '🎁', to: '/shop' },

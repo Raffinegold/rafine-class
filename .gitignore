@@ -11,3 +11,6 @@ qa/*_report.json
 
 # gh-pages 배포용 임시 worktree
 .ghp-tmp/
+
+# 시드 생성 중간 산출물
+.tmp/

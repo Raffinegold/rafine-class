@@ -258,7 +258,7 @@ class MaterialStore {
       return Boolean(data);
     }
 
-    const id = row.id ?? uid('mat');
+    const id = patch.id || row.id || uid('mat');
     const saved: Material = { ...patch, id };
     const idx = this.db.materials.findIndex((m) => m.id === id);
     if (idx >= 0) this.db.materials[idx] = saved;

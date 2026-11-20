@@ -342,6 +342,39 @@ export interface MaterialMission {
   deep: string;
 }
 
+/** 따라 만들기 예제 — 기초 → 변형 → 실전 순서로 2~3개 */
+export interface MaterialBuild {
+  /** 기초 · 변형 · 실전 */
+  label: string;
+  title: string;
+  intro?: string;
+  steps: MaterialStep[];
+  /** 완성했을 때 화면에 나오는 결과 */
+  out?: string;
+}
+
+/** 혼자 풀어 보는 미니 실습 — 예상 출력까지 스스로 확인 */
+export interface MaterialPractice {
+  title: string;
+  prompt: string;
+  starter?: string;
+  /** 예상 출력 (정답 코드가 아니라 결과만) */
+  expect: string;
+  hint?: string;
+}
+
+/** 일부러 망가뜨린 코드 고치기 — 문법 / 실행 / 논리 */
+export interface MaterialDebug {
+  kind: '문법' | '실행' | '논리';
+  title: string;
+  code: string;
+  /** 실행했을 때 보이는 증상 */
+  symptom: string;
+  /** 고친 뒤 확인할 기준 */
+  check: string;
+  hint?: string;
+}
+
 /** 학생 화면에 그대로 그리는 내용 — 정답·교사용 수업안은 여기에 없습니다 */
 export interface MaterialStudentContent {
   goal?: string;
@@ -350,10 +383,17 @@ export interface MaterialStudentContent {
   conceptTitle?: string;
   concept?: MaterialConceptRow[];
   predict?: { code: string; answer: string };
+  /** 기초 따라 만들기 (builds 가 있으면 그 뒤에 이어서 그립니다) */
   steps?: MaterialStep[];
+  /** 변형 · 실전 예제 */
+  builds?: MaterialBuild[];
+  practice?: MaterialPractice[];
+  debug?: MaterialDebug[];
   mistakes?: { symptom: string; cause: string }[];
   hints?: string[];
   missions?: MaterialMission;
+  /** 미션별 예시 출력 */
+  missionsOut?: { basic: string; challenge: string; deep: string };
   selfcheck?: string[];
   note?: string;
 }
@@ -366,6 +406,10 @@ export interface MaterialTeacherGuide {
   ai?: { when: string; what: string; prompt?: string; rule?: string }[];
   errors?: { symptom: string; cause: string; coach: string }[];
   tips?: string[];
+  /** 2시간(100~120분) 시간대별 진행 */
+  timeline?: { min: string; title: string; detail: string }[];
+  /** 학생이 자주 묻는 질문과 코치 멘트 */
+  qa?: { q: string; a: string }[];
 }
 
 export interface Material {

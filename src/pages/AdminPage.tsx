@@ -4,20 +4,23 @@ import { Badge, Button, Card, LevelPill, Modal, SectionTitle, useToast } from '.
 import { parseWordCsv } from '../lib/csv';
 import { copyText } from '../lib/report';
 import MaterialsPanel from './admin/MaterialsPanel';
+import TeacherGuidesPanel from './admin/TeacherGuidesPanel';
 import { LEVEL_META, CODING_LEVELS, CODING_LEVEL_META, type CodingLevel, type Level, type RedemptionRequest, type ShopItem, type Student, type Subject } from '../types';
 import { cn, formatKoTimestamp, todayStr } from '../lib/util';
 
-type Tab = 'students' | 'words' | 'shop' | 'materials';
+type Tab = 'students' | 'words' | 'shop' | 'materials' | 'guides';
 
 /**
- * 관리 도구는 딱 세 가지로만 남깁니다.
- * 학생 계정·PIN · 단어장 · 상점 상품 — 나머지(진도·메모·리포트)는 앞 화면 3단계에서 합니다.
+ * 관리 도구는 학생 계정·PIN · 단어장 · 상점 상품 + **수업자료 / 수업안** 다섯 탭입니다.
+ *  · 📂 수업자료 = 수업 중에 아이들과 같이 띄워 보는 학생용 자료 (등록·수정·배정·미리보기)
+ *  · 📖 수업안   = 선생님만 보는 강의 가이드 (진행표·비유·판서·코치 멘트·정답 코드)
  */
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'students', label: '학생 · PIN', icon: '🧑‍🎓' },
-  { key: 'words', label: '단어장', icon: '📖' },
+  { key: 'words', label: '단어장', icon: '📚' },
   { key: 'shop', label: '상점 상품', icon: '🎁' },
-  { key: 'materials', label: '자료실 · 수업안', icon: '📂' },
+  { key: 'materials', label: '수업자료', icon: '📂' },
+  { key: 'guides', label: '수업안', icon: '📖' },
 ];
 
 /** 수강 과목 선택 3가지 (원장님 화면) — 코딩이 기본, TOSEL 영어는 따로 켭니다 */
@@ -127,7 +130,8 @@ export default function AdminPage() {
         {tab === 'students' ? <StudentsTab /> : null}
         {tab === 'words' ? <WordsTab /> : null}
         {tab === 'shop' ? <ShopAdminTab /> : null}
-        {tab === 'materials' ? <MaterialsPanel /> : null}
+        {tab === 'materials' ? <MaterialsPanel onGoGuides={() => setTab('guides')} /> : null}
+        {tab === 'guides' ? <TeacherGuidesPanel /> : null}
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white bg-white/95 backdrop-blur md:hidden">
