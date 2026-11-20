@@ -37,6 +37,40 @@ import {
 } from '../data/seed';
 import { addDays, hashPin, mulberry32, randomPin, randomToken, todayStr, uid, verifyPin } from './util';
 
+/** 원장 로그인 세션을 기기에 남겨 새로고침 후에도 이어지게 합니다 (기기 로컬 저장) */
+const SESSION_MIRROR_KEY = 'rafine-sb-session-v1';
+
+function saveSession(session: { access_token: string; refresh_token?: string }) {
+  try {
+    localStorage.setItem(
+      SESSION_MIRROR_KEY,
+      JSON.stringify({ access_token: session.access_token, refresh_token: session.refresh_token ?? '' })
+    );
+  } catch {
+    /* 저장 실패해도 로그인은 유지 */
+  }
+}
+
+function readSavedSession(): { access_token: string; refresh_token: string } | null {
+  try {
+    const raw = localStorage.getItem(SESSION_MIRROR_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { access_token?: string; refresh_token?: string };
+    if (!parsed.access_token) return null;
+    return { access_token: parsed.access_token, refresh_token: parsed.refresh_token ?? '' };
+  } catch {
+    return null;
+  }
+}
+
+function clearSavedSession() {
+  try {
+    localStorage.removeItem(SESSION_MIRROR_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 const LS_KEY = 'rafine-voca-db-v1';
 
 interface DB {
@@ -150,7 +184,19 @@ class VocaStore {
         // 앱 전체가 같은 Supabase 클라이언트를 씁니다 (두 개를 만들면 로그인 세션이 서로 지워집니다)
         this.client = supabase;
         this.mode = 'supabase';
-        const session = await this.client.auth.getSession();
+        let session = await this.client.auth.getSession();
+        // 새로고침 후 라이브러리 저장소가 비어 있으면, 기기에 남겨 둔 세션으로 복원합니다.
+        if (!session.data.session) {
+          const saved = readSavedSession();
+          if (saved) {
+            try {
+              const restored = await this.client.auth.setSession(saved);
+              session = { data: { session: restored.data.session }, error: restored.error } as typeof session;
+            } catch (err) {
+              console.warn('[voca] 저장된 로그인 세션 복원 실패', err);
+            }
+          }
+        }
         this.adminEmail = session.data.session?.user?.email ?? null;
         // 로그인 전(anon)에는 students 등 개인정보 테이블을 읽을 수 없습니다.
         // 그 실패로 앱 전체를 데모 모드로 떨어뜨리지 않고, 로그인 후에 다시 읽습니다.
@@ -1533,6 +1579,7 @@ class VocaStore {
     const { data, error } = await this.client.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
     this.adminEmail = data.user?.email ?? null;
+    if (data.session) saveSession(data.session);
     await this.loadCloud();
     this.emit();
     return true;
@@ -1542,6 +1589,7 @@ class VocaStore {
     if (this.mode === 'supabase' && this.client) {
       await this.client.auth.signOut();
       this.adminEmail = null;
+      clearSavedSession();
     }
   }
 
