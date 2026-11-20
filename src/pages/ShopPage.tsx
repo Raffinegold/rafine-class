@@ -94,7 +94,7 @@ export default function ShopPage() {
           <SectionTitle sub={`지금 교환 가능 ${affordable}개 · 캐시가 충분하면 신청 버튼이 켜져요`}>기프티콘 상품</SectionTitle>
         </div>
 
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => {
             const enough = balance >= item.price;
             const missing = Math.max(0, item.price - balance);

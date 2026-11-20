@@ -235,7 +235,7 @@ function EnglishHome() {
               </div>
             </Card>
 
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {wrongNotes.length === 0 ? (
                 <Card>
                   <p className="py-6 text-center text-sm text-slate-500">오답이 없어요. 아주 좋아요! 🎈</p>

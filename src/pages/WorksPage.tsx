@@ -105,7 +105,7 @@ export default function WorksPage() {
           </Button>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {works.length === 0 ? (
             <Card className="py-10 text-center sm:col-span-2">
               <p className="text-4xl">🖼️</p>

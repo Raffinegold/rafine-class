@@ -102,7 +102,7 @@ export default function MaterialsPage() {
             <p className="mt-0.5 text-[20px] font-extrabold leading-tight">
               {meta.emoji} {meta.label}
             </p>
-            <div className="mt-2.5 flex items-center gap-1.5">
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
               <span data-testid="assigned-week" className="rounded-xl bg-white/15 px-3 py-1.5 text-[13px] font-extrabold">
                 {activeWeek}주차
               </span>
@@ -164,7 +164,7 @@ export default function MaterialsPage() {
           </Card>
         ) : null}
 
-        <div className="mt-2 grid gap-3 lg:grid-cols-2 lg:items-start">
+        <div className="mt-2 grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start">
           {list.map((m) => {
             const kind = KIND_META[m.kind] ?? KIND_META.theory;
             return (

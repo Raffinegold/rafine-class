@@ -349,7 +349,7 @@ export default function MaterialsPanel({ onGoGuides }: { onGoGuides?: () => void
               </Card>
             ) : null}
 
-            <div className="mt-2 grid gap-3 lg:grid-cols-2 lg:items-start">
+            <div className="mt-2 grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start">
               {previewList.map((m) => {
                 const kind = KIND_META[m.kind] ?? KIND_META.theory;
                 return (

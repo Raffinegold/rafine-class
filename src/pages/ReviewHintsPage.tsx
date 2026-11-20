@@ -156,7 +156,7 @@ export default function ReviewHintsPage() {
           {meta.emoji} {meta.label} · {meta.summary}
         </p>
 
-        <div className="mt-3 grid gap-4 md:grid-cols-2 md:items-start lg:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start">
           {cards.map((card) => (
             <ConceptCardView
               key={card.id}
