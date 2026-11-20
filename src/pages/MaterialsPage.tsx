@@ -103,28 +103,28 @@ export default function MaterialsPage() {
               {meta.emoji} {meta.label}
             </p>
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-              <span data-testid="assigned-week" className="rounded-xl bg-white/15 px-3 py-1.5 text-[13px] font-extrabold">
+              <span data-testid="assigned-week" className="rounded-xl bg-white/15 px-3 py-1.5 text-[13px] font-extrabold whitespace-nowrap">
                 {activeWeek}주차
               </span>
               <button
                 data-testid="session-1"
                 onClick={() => setSession(1)}
                 className={cn(
-                  'rounded-xl px-3 py-1.5 text-[13px] font-extrabold transition',
+                  'whitespace-nowrap rounded-xl px-3 py-1.5 text-[13px] font-extrabold transition',
                   session === 1 ? 'bg-white text-brand-700' : 'bg-white/15 text-white/80'
                 )}
               >
-                1회차 · 이론+만들기
+                1회차<span className="hidden sm:inline"> · 이론+만들기</span>
               </button>
               <button
                 data-testid="session-2"
                 onClick={() => setSession(2)}
                 className={cn(
-                  'rounded-xl px-3 py-1.5 text-[13px] font-extrabold transition',
+                  'whitespace-nowrap rounded-xl px-3 py-1.5 text-[13px] font-extrabold transition',
                   session === 2 ? 'bg-white text-brand-700' : 'bg-white/15 text-white/80'
                 )}
               >
-                2회차 · 마무리+업그레이드
+                2회차<span className="hidden sm:inline"> · 마무리+업그레이드</span>
               </button>
             </div>
             {plan ? <p className="mt-2 text-[12px] leading-relaxed text-white/80">{plan.title} — {session === 1 ? plan.goal : plan.plan2}</p> : null}
