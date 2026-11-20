@@ -9,7 +9,7 @@ import { useSubject } from '../subject-context';
 import { buildMission, buildReviewOnly } from '../lib/mission';
 import { computeStreak, computeWeekStats, weeklyRanking } from '../lib/stats';
 import { LEVEL_META } from '../types';
-import { cn, formatKoShort, pct, todayStr } from '../lib/util';
+import { cn, formatKoShort, PAGE_W, pct, todayStr } from '../lib/util';
 
 type Tab = 'today' | 'wrong' | 'rank';
 const TABS: Tab[] = ['today', 'wrong', 'rank'];
@@ -82,7 +82,7 @@ function EnglishHome() {
         }
       />
 
-      <main className="mx-auto max-w-3xl px-4 pb-28 pt-4">
+      <main className={cn(PAGE_W, 'pb-28 pt-4 md:pb-10')}>
         <div className="mb-4 flex items-center gap-3">
           <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 text-lg font-extrabold text-white shadow-soft">
             {student.name.slice(0, 1)}
@@ -235,7 +235,7 @@ function EnglishHome() {
               </div>
             </Card>
 
-            <div className="space-y-2">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {wrongNotes.length === 0 ? (
                 <Card>
                   <p className="py-6 text-center text-sm text-slate-500">오답이 없어요. 아주 좋아요! 🎈</p>
@@ -269,7 +269,7 @@ function EnglishHome() {
         ) : null}
 
         {tab === 'rank' ? (
-          <section className="space-y-4">
+          <section className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
             <Card>
               <SectionTitle sub={`${stats.weekLabel} · 닉네임으로 표시돼요`}>학원 주간 랭킹</SectionTitle>
               <ul className="mt-4 space-y-2">

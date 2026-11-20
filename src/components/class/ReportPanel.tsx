@@ -59,7 +59,7 @@ export default function ReportPanel({ student, onGoMemo }: { student: Student; o
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:items-start lg:gap-4 lg:space-y-0">
       <Card className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <button
@@ -97,7 +97,7 @@ export default function ReportPanel({ student, onGoMemo }: { student: Student; o
           </p>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
           <Button onClick={copy} data-testid="report-copy" disabled={empty}>
             💬 카톡 전송용 복사
           </Button>
@@ -249,7 +249,7 @@ export default function ReportPanel({ student, onGoMemo }: { student: Student; o
         </p>
       </div>
 
-      <p className="text-center text-[11px] leading-relaxed text-slate-400">
+      <p className="text-center text-[11px] leading-relaxed text-slate-400 lg:col-span-2">
         ‘카톡 전송용 복사’를 누르면 카카오톡에 그대로 붙여넣을 수 있는 글이 복사돼요. 종합 소견을 고친 뒤 복사하면 고친 문장으로 나가요.
       </p>
     </div>

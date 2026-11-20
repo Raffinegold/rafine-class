@@ -42,7 +42,7 @@ export default function MindPanel({ student }: { student: Student }) {
   const pct = Math.round((done.length / 24) * 100);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
       {/* -------------------------------- 기질 코드 -------------------------------- */}
       <Card className="space-y-3">
         <SectionTitle sub="rafine-mind 검사 결과 코드를 넣으면 바로 해석해요">기질 코드 (RC-XXXX)</SectionTitle>
@@ -210,7 +210,9 @@ export default function MindPanel({ student }: { student: Student }) {
       </Card>
 
       {/* --------------------------------- 작품 --------------------------------- */}
-      <WorksMini studentId={student.id} />
+      <div className="lg:col-span-2">
+        <WorksMini studentId={student.id} />
+      </div>
     </div>
   );
 }

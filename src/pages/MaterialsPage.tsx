@@ -7,7 +7,7 @@ import MaterialContentView from '../components/MaterialContentView';
 import { useClassStore } from '../lib/classStore';
 import { asTrack, CURRICULUM, TRACK_META, type Track } from '../lib/curriculum';
 import { materialStore, useMaterialStore } from '../lib/materialStore';
-import { cn } from '../lib/util';
+import { cn, PAGE_W_WIDE } from '../lib/util';
 
 /**
  * 📂 학생 수업자료실 (2026-11-20)
@@ -83,6 +83,7 @@ export default function MaterialsPage() {
         brand="라피네 클래스"
         title="수업자료실"
         hideSubjectSwitch
+        wide
         right={
           <button
             onClick={logout}
@@ -93,10 +94,10 @@ export default function MaterialsPage() {
         }
       />
 
-      <main className="mx-auto max-w-3xl px-4 pt-4">
+      <main className={cn(PAGE_W_WIDE, 'pt-4')}>
         {/* --------------------------- 배정 숫자 카드 --------------------------- */}
-        <Card className="overflow-hidden p-0">
-          <div className="bg-gradient-to-br from-brand-600 to-indigo-700 px-4 py-4 text-white">
+        <Card className="overflow-hidden p-0 md:grid md:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+          <div className="bg-gradient-to-br from-brand-600 to-indigo-700 px-4 py-4 text-white md:px-5">
             <p className="text-[11px] font-bold text-white/70">선생님이 배정한 과정</p>
             <p className="mt-0.5 text-[20px] font-extrabold leading-tight">
               {meta.emoji} {meta.label}
@@ -130,7 +131,7 @@ export default function MaterialsPage() {
           </div>
 
           {/* 지난 주차 다시 보기 */}
-          <div className="flex gap-1 overflow-x-auto px-3 py-2.5">
+          <div className="flex gap-1 overflow-x-auto px-3 py-2.5 md:flex-wrap md:place-content-center md:content-center md:gap-1.5 md:px-4 md:overflow-visible">
             {Array.from({ length: Math.max(activeWeek, 4) }, (_, i) => i + 1).map((w) => (
               <button
                 key={w}
@@ -163,7 +164,7 @@ export default function MaterialsPage() {
           </Card>
         ) : null}
 
-        <div className="mt-2 space-y-3">
+        <div className="mt-2 grid gap-3 lg:grid-cols-2 lg:items-start">
           {list.map((m) => {
             const kind = KIND_META[m.kind] ?? KIND_META.theory;
             return (

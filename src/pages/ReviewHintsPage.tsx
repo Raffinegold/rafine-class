@@ -57,7 +57,7 @@ export default function ReviewHintsPage() {
         }
       />
 
-      <main className="mx-auto max-w-3xl px-4 pb-32 pt-5">
+      <main className="mx-auto w-full max-w-3xl px-4 pb-32 pt-5 md:max-w-5xl md:px-6 md:pb-16 lg:max-w-6xl">
         {highlight ? (
           <section
             data-testid="hint-week-highlight"
@@ -156,7 +156,7 @@ export default function ReviewHintsPage() {
           {meta.emoji} {meta.label} · {meta.summary}
         </p>
 
-        <div className="mt-3 space-y-4">
+        <div className="mt-3 grid gap-4 md:grid-cols-2 md:items-start lg:grid-cols-2">
           {cards.map((card) => (
             <ConceptCardView
               key={card.id}

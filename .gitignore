@@ -14,3 +14,7 @@ qa/*_report.json
 
 # 시드 생성 중간 산출물
 .tmp/
+
+# 넓은 화면 점검용 데모 빌드 · 스크린샷
+dist-demo/
+qa/**/*.png

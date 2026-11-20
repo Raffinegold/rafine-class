@@ -95,34 +95,34 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="relative overflow-hidden bg-gradient-to-br from-brand-600 via-brand-600 to-indigo-800 px-5 pb-16 pt-10 text-white">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10" />
-        <div className="pointer-events-none absolute -bottom-16 -left-10 h-52 w-52 rounded-full bg-white/5" />
-        <div className="relative mx-auto max-w-md">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-brand-600 via-brand-600 to-indigo-800">
+      <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10" />
+      <div className="pointer-events-none absolute -bottom-16 -left-10 h-52 w-52 rounded-full bg-white/5" />
+      {/* 폰은 한 줄, 태블릿·PC는 왼쪽 브랜드 · 오른쪽 로그인 카드로 넓게 씁니다 */}
+      <div className="relative mx-auto w-full max-w-md px-5 pb-10 pt-10 text-white md:max-w-6xl md:px-6 lg:grid lg:grid-cols-[1.1fr_minmax(0,440px)] lg:items-center lg:gap-14 lg:py-16">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 text-sm font-semibold text-white/80">
             <span className="grid h-8 w-8 place-items-center rounded-xl bg-white/15 text-base">🎓</span>
             라피네코딩컴퓨터학원 두정점
           </div>
-          <h1 className="mt-4 text-[30px] font-extrabold leading-tight">
+          <h1 className="mt-4 text-[30px] font-extrabold leading-tight lg:mt-5 lg:text-[46px]">
             라피네 클래스
-            <span className="ml-2 align-middle text-sm font-bold text-sunny">Rafine Class</span>
+            <span className="ml-2 align-middle text-sm font-bold text-sunny lg:text-base">Rafine Class</span>
           </h1>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-white/75">
+          <p className="mt-1.5 text-[13px] leading-relaxed text-white/75 lg:mt-2 lg:text-[15px]">
             오늘 배운 코딩, 만든 작품, 그리고 다정한 월말 리포트까지 한 곳에.
           </p>
-          <p className="mt-1 text-[11px] font-semibold text-white/55">박종혁 원장 · 미술심리상담사 자격 기반 맞춤 관리</p>
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold">💻 24주 코딩 진도</span>
-            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold">🎮 코딩 게임 5종</span>
-            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold">🎨 내 작품 보관함</span>
-            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold">📄 월말 리포트</span>
+          <p className="mt-1 text-[11px] font-semibold text-white/55 lg:text-[12px]">박종혁 원장 · 미술심리상담사 자격 기반 맞춤 관리</p>
+          <div className="mt-4 flex flex-wrap gap-1.5 lg:mt-5">
+            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold lg:px-3 lg:py-1.5 lg:text-[12px]">💻 24주 코딩 진도</span>
+            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold lg:px-3 lg:py-1.5 lg:text-[12px]">🎮 코딩 게임 5종</span>
+            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold lg:px-3 lg:py-1.5 lg:text-[12px]">🎨 내 작품 보관함</span>
+            <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold lg:px-3 lg:py-1.5 lg:text-[12px]">📄 월말 리포트</span>
           </div>
         </div>
-      </div>
 
-      <div className="mx-auto -mt-10 max-w-md px-4 pb-10">
-        <div className="rounded-3xl border border-white bg-white/95 p-4 shadow-card backdrop-blur">
+        <div className="mt-8 lg:mt-0">
+          <div className="rounded-3xl border border-white bg-white/95 p-4 text-slate-900 shadow-card backdrop-blur sm:p-5">
           <div className="mb-4 grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1">
             {(
               [
@@ -261,13 +261,14 @@ export default function LoginPage() {
               </p>
             ) : null}
           </div>
-        </div>
+          </div>
 
-        <p className="mt-5 text-center text-[11px] leading-relaxed text-slate-400">
-          코딩 문제와 TOSEL 단어는 자체 제작했습니다. 뜻과 예문은 사전 문장을 복제하지 않았어요.
-          <br />
-          라피네코딩컴퓨터학원 두정점 · 24주 코딩 커리큘럼 + 작품 기록 도구
-        </p>
+          <p className="mt-5 text-center text-[11px] leading-relaxed text-white/60">
+            코딩 문제와 TOSEL 단어는 자체 제작했습니다. 뜻과 예문은 사전 문장을 복제하지 않았어요.
+            <br />
+            라피네코딩컴퓨터학원 두정점 · 24주 코딩 커리큘럼 + 작품 기록 도구
+          </p>
+        </div>
       </div>
 
       <Modal open={!!selected} onClose={() => setSelected(null)} title={selected ? `${selected.name} · PIN 입력` : ''}>

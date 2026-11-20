@@ -43,7 +43,7 @@ export default function ShopPage() {
   return (
     <div className="min-h-screen pb-safe">
       <header className="sticky top-0 z-20 border-b border-white/60 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-4 py-3 md:max-w-5xl md:px-6 lg:max-w-6xl">
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-items-center rounded-2xl bg-brand-600 text-base text-white shadow-soft">🎁</span>
             <div>
@@ -55,8 +55,9 @@ export default function ShopPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 pb-28 pt-4">
-        <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-600 to-indigo-700 p-5 text-white shadow-card">
+      <main className="mx-auto w-full max-w-3xl px-4 pb-28 pt-4 md:max-w-5xl md:px-6 md:pb-10 lg:max-w-6xl">
+        <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-600 to-indigo-700 p-5 text-white shadow-card lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:items-center lg:gap-8">
+          <div>
           <p className="text-xs font-semibold text-white/70">내 캐시</p>
           <p className="mt-1 text-4xl font-extrabold tabular-nums" data-testid="shop-balance">
             {balance.toLocaleString()}
@@ -76,11 +77,12 @@ export default function ShopPage() {
               />
             </div>
           </div>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          </div>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row lg:mt-0 lg:flex-col">
             <Button data-testid="shop-go-game" variant="sun" className="flex-1" onClick={() => navigate('/game')}>
               🎮 게임으로 더 모으기
             </Button>
-            <p className="self-center text-[11px] text-white/70">
+            <p className="self-center text-[11px] text-white/70 lg:text-center">
               {limit - earnedToday > 0
                 ? `오늘 ${limit - earnedToday}원 더 모을 수 있어요`
                 : '오늘 상한을 다 채웠어요 · 연습으로 계속 플레이할 수 있어요'}
@@ -92,7 +94,7 @@ export default function ShopPage() {
           <SectionTitle sub={`지금 교환 가능 ${affordable}개 · 캐시가 충분하면 신청 버튼이 켜져요`}>기프티콘 상품</SectionTitle>
         </div>
 
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => {
             const enough = balance >= item.price;
             const missing = Math.max(0, item.price - balance);

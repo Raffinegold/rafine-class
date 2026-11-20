@@ -3,7 +3,7 @@ import { useSession } from '../app-context';
 import { useClassStore } from '../lib/classStore';
 import { TRACK_META, TRACK_LIST } from '../lib/curriculum';
 import { fileToCompressedPhoto, photoSizeKb } from '../lib/photo';
-import { todayStr } from '../lib/util';
+import { cn, PAGE_W, todayStr } from '../lib/util';
 import { Button, Card, Modal, useToast } from '../components/ui';
 import StudentHeader from '../components/StudentHeader';
 import StudentNav from '../components/StudentNav';
@@ -95,19 +95,19 @@ export default function WorksPage() {
         }
       />
 
-      <main className="mx-auto max-w-3xl px-4 pb-32 pt-5">
+      <main className={cn(PAGE_W, 'pb-32 pt-5')}>
         <div className="rounded-3xl bg-gradient-to-br from-brand-600 to-indigo-700 px-5 py-5 text-white shadow-card">
           <p className="text-xs font-semibold text-white/70">{TRACK_META[profile.track].emoji} {TRACK_META[profile.track].label} 트랙</p>
           <h1 className="mt-1 text-2xl font-extrabold">{student.name}의 작품 {works.length}개</h1>
           <p className="mt-1 text-[13px] text-white/80">만든 것을 여기에 남겨 두면, 월말 학부모 리포트에 그대로 들어가요.</p>
-          <Button variant="sun" size="lg" className="mt-4 w-full" onClick={openForm} data-testid="work-add">
+          <Button variant="sun" size="lg" className="mt-4 w-full lg:w-auto lg:min-w-[220px]" onClick={openForm} data-testid="work-add">
             + 새 작품 등록
           </Button>
         </div>
 
-        <div className="mt-5 space-y-3">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {works.length === 0 ? (
-            <Card className="py-10 text-center">
+            <Card className="py-10 text-center sm:col-span-2">
               <p className="text-4xl">🖼️</p>
               <p className="mt-3 text-sm font-semibold text-slate-600">아직 담긴 작품이 없어요</p>
               <p className="mt-1 text-xs text-slate-400">오늘 만든 것부터 하나씩 남겨 보세요.</p>

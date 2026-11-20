@@ -10,7 +10,7 @@ import { materialStore, useMaterialStore } from '../lib/materialStore';
 import { CURRICULUM, TRACK_META } from '../lib/curriculum';
 import { problemById } from '../data/codingSeed';
 import { sfx } from '../lib/sound';
-import { cn, nameWithSubject, pct, weekStartStr, ymd } from '../lib/util';
+import { cn, nameWithSubject, PAGE_W, pct, weekStartStr, ymd } from '../lib/util';
 import { CODING_LEVELS, CODING_LEVEL_META, CODING_KIND_META, type CodingGameKey, type CodingProblem, type Student } from '../types';
 
 type Tab = 'today' | 'wrong';
@@ -101,7 +101,7 @@ export default function CodingHome() {
         }
       />
 
-      <main className="mx-auto max-w-3xl px-4 pb-28 pt-4" data-testid="coding-home">
+      <main className={cn(PAGE_W, 'pb-28 pt-4 md:pb-10')} data-testid="coding-home">
         {mission ? (
           <MissionRunner
             student={student}
@@ -128,9 +128,9 @@ export default function CodingHome() {
             </div>
 
             {tab === 'today' ? (
-              <div className="space-y-3">
+              <div className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
                 {/* ------------------------------ 오늘의 코딩 미션 ------------------------------ */}
-                <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-950 p-5 text-white shadow-card">
+                <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-950 p-5 text-white shadow-card lg:col-span-2">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold text-white/70">오늘의 코딩 미션</p>
@@ -183,6 +183,7 @@ export default function CodingHome() {
                 </section>
 
                 {/* ------------------------------ 오늘의 24주 진도 ------------------------------ */}
+                <div className="space-y-3">
                 <section
                   data-testid="coding-week-card"
                   className="rounded-3xl border border-white bg-white p-4 shadow-soft"
@@ -293,7 +294,9 @@ export default function CodingHome() {
                     </span>
                   </button>
                 </div>
+                </div>
 
+                <div className="space-y-3">
                 {/* ------------------------------ 코딩 5종 게임 ------------------------------ */}
                 <Card data-testid="coding-games-card">
                   <SectionTitle sub="배운 걸 게임으로 한 판 · 캐시도 쌓여요">코딩 5종 게임</SectionTitle>
@@ -347,6 +350,7 @@ export default function CodingHome() {
                     레벨은 원장님이 관리자 화면에서 바꿔 줄 수 있어요. 문제를 다 풀면 다음 레벨로 올라가요.
                   </p>
                 </Card>
+                </div>
               </div>
             ) : (
               <section className="space-y-4">

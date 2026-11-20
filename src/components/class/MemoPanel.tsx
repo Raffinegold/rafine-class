@@ -22,7 +22,7 @@ export default function MemoPanel({ student }: { student: Student }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
       <Card className="space-y-3">
         <SectionTitle sub="세 칸만 채우면 월말 리포트의 재료가 됩니다">오늘 수업 1줄 메모</SectionTitle>
 

@@ -147,9 +147,9 @@ export default function TeacherGuidesPanel() {
         ) : null}
       </Card>
 
-      <div className="grid gap-3 md:grid-cols-[240px_1fr]">
+      <div className="grid gap-3 md:grid-cols-[240px_1fr] lg:grid-cols-[280px_1fr] lg:gap-4">
         {/* 이 차시 자료 목록 */}
-        <Card className="max-h-[560px] overflow-y-auto p-2">
+        <Card className="max-h-[560px] overflow-y-auto p-2 lg:sticky lg:top-[92px] lg:max-h-[calc(100vh-120px)]">
           <p className="px-1.5 pb-1 text-[10.5px] font-extrabold uppercase text-slate-400">
             이 차시 자료 {weekMaterials.length}개 · 수업안 {withGuideCount}개
           </p>

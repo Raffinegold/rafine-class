@@ -15,7 +15,7 @@ export default function SubjectSwitch() {
       data-testid="subject-switch"
       role="tablist"
       aria-label="과목 선택"
-      className="flex w-full items-center gap-1 rounded-2xl bg-slate-100 p-1"
+      className="flex w-full items-center gap-1 rounded-2xl bg-slate-100 p-1 md:w-auto md:max-w-[420px] md:min-w-[260px]"
     >
       {allowed.map((s) => {
         const active = subject === s;

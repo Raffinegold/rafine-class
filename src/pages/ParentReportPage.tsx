@@ -35,7 +35,7 @@ export default function ParentReportPage() {
 
   return (
     <div className="min-h-screen pb-safe">
-      <div className="mx-auto max-w-md px-4 py-6">
+      <div className="mx-auto w-full max-w-md px-4 py-6 md:max-w-3xl md:px-6">
         <ParentReportCard student={student} stats={stats} />
         <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-400">
           문의는 학원으로 연락 주세요. 이 페이지는 로그인 없이 열람되는 읽기 전용 링크예요.

@@ -4,7 +4,7 @@ import { useSession, useVocaStore } from '../../app-context';
 import { useClassStore } from '../../lib/classStore';
 import { TRACK_LIST, type Track } from '../../lib/curriculum';
 import { parseMindCode } from '../../lib/mind';
-import { cn } from '../../lib/util';
+import { cn, PAGE_W_WIDE } from '../../lib/util';
 import { Button, Modal, useToast } from '../../components/ui';
 import type { CodingLevel, Subject } from '../../types';
 import MindPanel from '../../components/class/MindPanel';
@@ -47,7 +47,7 @@ export default function AdminClassPage() {
   return (
     <div className="min-h-screen bg-slate-50/60 pb-16">
       <header className="sticky top-0 z-30 border-b border-white/70 bg-white/90 backdrop-blur no-print">
-        <div className="mx-auto max-w-3xl px-4 py-3">
+        <div className={cn(PAGE_W_WIDE, 'py-3')}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-brand-600 text-base text-white shadow-soft">🎓</span>
@@ -75,9 +75,11 @@ export default function AdminClassPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 pt-4">
+      <main className={cn(PAGE_W_WIDE, 'pt-4')}>
+        {/* 넓은 화면: 왼쪽에 ‘오늘 볼 학생’ 고정, 오른쪽에 1·2·3 단계 패널 */}
+        <div className="lg:grid lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:items-start lg:gap-4">
         {/* ------------------------------ 학생 선택 ------------------------------ */}
-        <section className="rounded-3xl border border-white bg-white p-4 shadow-soft no-print">
+        <section className="rounded-3xl border border-white bg-white p-4 shadow-soft no-print lg:sticky lg:top-[76px]">
           <div className="flex items-end justify-between">
             <p className="text-[11px] font-extrabold text-slate-400">오늘 볼 학생</p>
             <div className="flex items-center gap-1.5">
@@ -149,14 +151,14 @@ export default function AdminClassPage() {
                   );
                 })()}
               </div>
-              <div className="mt-2 grid grid-cols-3 gap-2">
+              <div className="mt-2 grid grid-cols-3 gap-2 lg:grid-cols-1 lg:gap-1.5">
                 {STEPS.map((s) => (
                   <button
                     key={s.key}
                     data-testid={`step-${s.key}`}
                     onClick={() => setStep(s.key)}
                     className={cn(
-                      'rounded-2xl border px-1 py-2.5 text-center transition',
+                      'rounded-2xl border px-1 py-2.5 text-center transition lg:flex lg:items-center lg:gap-2.5 lg:px-3 lg:text-left',
                       step === s.key
                         ? 'border-brand-200 bg-brand-600 text-white shadow-soft'
                         : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
@@ -164,15 +166,17 @@ export default function AdminClassPage() {
                   >
                     <span
                       className={cn(
-                        'mx-auto grid h-6 w-6 place-items-center rounded-full text-[11px] font-extrabold',
+                        'mx-auto grid h-6 w-6 place-items-center rounded-full text-[11px] font-extrabold lg:mx-0 lg:shrink-0',
                         step === s.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
                       )}
                     >
                       {s.no}
                     </span>
-                    <span className="mt-1 block text-[12px] font-extrabold leading-tight">{s.label}</span>
-                    <span className={cn('mt-0.5 block text-[10px] font-semibold', step === s.key ? 'text-white/70' : 'text-slate-400')}>
-                      {s.sub}
+                    <span className="lg:min-w-0">
+                      <span className="mt-1 block text-[12px] font-extrabold leading-tight lg:mt-0">{s.label}</span>
+                      <span className={cn('mt-0.5 block text-[10px] font-semibold lg:mt-0', step === s.key ? 'text-white/70' : 'text-slate-400')}>
+                        {s.sub}
+                      </span>
                     </span>
                   </button>
                 ))}
@@ -183,7 +187,7 @@ export default function AdminClassPage() {
           )}
         </section>
 
-        <div className="mt-4">
+        <div className="mt-4 lg:mt-0 lg:min-w-0">
           {student ? (
             step === 'mind' ? (
               <MindPanel student={student} />
@@ -193,6 +197,7 @@ export default function AdminClassPage() {
               <ReportPanel student={student} onGoMemo={() => setStep('memo')} />
             )
           ) : null}
+        </div>
         </div>
       </main>
 

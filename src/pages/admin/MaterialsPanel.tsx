@@ -349,7 +349,7 @@ export default function MaterialsPanel({ onGoGuides }: { onGoGuides?: () => void
               </Card>
             ) : null}
 
-            <div className="mt-2 space-y-3">
+            <div className="mt-2 grid gap-3 lg:grid-cols-2 lg:items-start">
               {previewList.map((m) => {
                 const kind = KIND_META[m.kind] ?? KIND_META.theory;
                 return (
@@ -430,7 +430,7 @@ export default function MaterialsPanel({ onGoGuides }: { onGoGuides?: () => void
 
       {/* ------------------------------ 3) 학생 배정 ------------------------------ */}
       {sub === 'assign' ? (
-        <div className="grid gap-3 md:grid-cols-[220px_1fr]">
+        <div className="grid gap-3 md:grid-cols-[220px_1fr] lg:grid-cols-[260px_1fr]">
           <Card className="max-h-[420px] overflow-y-auto p-2">
             {students.map((s) => (
               <button
@@ -444,7 +444,7 @@ export default function MaterialsPanel({ onGoGuides }: { onGoGuides?: () => void
             ))}
           </Card>
 
-          <div className="space-y-3">
+          <div className="space-y-3 md:grid md:grid-cols-2 md:items-start md:gap-3 md:space-y-0">
             <Card className="p-4">
               <p className="text-[13px] font-extrabold text-slate-800">{student?.name ?? '학생'} 배정</p>
               <p className="mt-0.5 text-[11.5px] text-slate-500">
