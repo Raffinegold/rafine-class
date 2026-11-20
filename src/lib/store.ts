@@ -1,4 +1,5 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { supabase, supabaseReady } from './supabase';
 import type {
   AppSettings,
   Assignment,
@@ -144,9 +145,10 @@ class VocaStore {
     const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim();
     const key = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim();
 
-    if (url && key) {
+    if (url && key && supabaseReady && supabase) {
       try {
-        this.client = createClient(url, key, { auth: { persistSession: true } });
+        // 앱 전체가 같은 Supabase 클라이언트를 씁니다 (두 개를 만들면 로그인 세션이 서로 지워집니다)
+        this.client = supabase;
         this.mode = 'supabase';
         const session = await this.client.auth.getSession();
         this.adminEmail = session.data.session?.user?.email ?? null;
@@ -158,6 +160,15 @@ class VocaStore {
           console.warn('[voca] 로그인 전 클라우드 읽기 보류 — 로그인 후 다시 불러옵니다', err);
         }
         this.watchCloud();
+        // 로그인/로그아웃 이벤트에서 원장 데이터를 다시 읽습니다 (새로고침 후에도 유지)
+        this.client.auth.onAuthStateChange((_event, session) => {
+          this.adminEmail = session?.user?.email ?? null;
+          if (session?.user) {
+            void this.loadCloud()
+              .then(() => this.emit())
+              .catch((err) => console.warn('[voca] 로그인 후 클라우드 읽기 보류', err));
+          }
+        });
         this.emit();
         return;
       } catch (err) {
