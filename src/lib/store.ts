@@ -162,6 +162,7 @@ class VocaStore {
   settings: AppSettings = { cash_daily_limit: DEFAULT_CASH_DAILY_LIMIT };
   ready: Promise<void>;
   adminEmail: string | null = null;
+  lastCloudError: string | null = null;
   studentToken: string | null = null;
 
   private client: SupabaseClient | null = null;
@@ -203,6 +204,7 @@ class VocaStore {
         try {
           await this.loadCloud();
         } catch (err) {
+          this.lastCloudError = err instanceof Error ? err.message : String(err);
           console.warn('[voca] 로그인 전 클라우드 읽기 보류 — 로그인 후 다시 불러옵니다', err);
         }
         this.watchCloud();
@@ -1583,6 +1585,31 @@ class VocaStore {
     await this.loadCloud();
     this.emit();
     return true;
+  }
+
+  /** 진단용 상태 요약 (?debug=1 에서만 화면에 보입니다 — 개인정보·토큰은 담지 않습니다) */
+  async debugSnapshot(): Promise<Record<string, unknown>> {
+    let gotrueEmail: string | null = null;
+    let gotrueError: string | null = null;
+    if (this.client) {
+      try {
+        const { data, error } = await this.client.auth.getSession();
+        gotrueEmail = data.session?.user?.email ?? null;
+        gotrueError = error?.message ?? null;
+      } catch (err) {
+        gotrueError = err instanceof Error ? err.message : String(err);
+      }
+    }
+    return {
+      mode: this.mode,
+      hasClient: Boolean(this.client),
+      adminEmail: this.adminEmail,
+      gotrueEmail,
+      gotrueError,
+      savedSession: Boolean(readSavedSession()),
+      lastCloudError: this.lastCloudError,
+      students: this.students.length,
+    };
   }
 
   async adminSignOut() {

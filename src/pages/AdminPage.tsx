@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSession, useVocaStore } from '../app-context';
 import { Badge, Button, Card, LevelPill, Modal, SectionTitle, useToast } from '../components/ui';
 import { parseWordCsv } from '../lib/csv';
@@ -43,6 +43,21 @@ function download(filename: string, content: string, mime = 'text/csv;charset=ut
   a.click();
   document.body.removeChild(a);
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** ?debug=1 일 때만 보이는 연결 진단 (토큰·개인정보 없음) */
+function DebugPanel() {
+  const store = useVocaStore();
+  const [info, setInfo] = useState<string>('');
+  useEffect(() => {
+    void store.debugSnapshot().then((snap) => setInfo(JSON.stringify(snap, null, 1)));
+  }, [store]);
+  if (!new URLSearchParams(window.location.search).get('debug')) return null;
+  return (
+    <pre className="mx-4 mt-3 overflow-x-auto rounded-2xl bg-slate-900 p-3 text-[10.5px] leading-relaxed text-emerald-200">
+      {info}
+    </pre>
+  );
 }
 
 export default function AdminPage() {
@@ -107,6 +122,7 @@ export default function AdminPage() {
         </div>
       </header>
 
+      <DebugPanel />
       <main className="mx-auto max-w-6xl px-4 pb-28 pt-4 md:pb-10">
         {tab === 'students' ? <StudentsTab /> : null}
         {tab === 'words' ? <WordsTab /> : null}
