@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { supabase } from './supabase';
-import { defaultTrackFor, type Track } from './curriculum';
+import { defaultTrackFor, asTrack, type Track } from './curriculum';
 import { todayStr, uid } from './util';
 
 /**
@@ -535,12 +535,17 @@ class ClassStore {
     const { data, error } = await supabase.rpc('student_class_bundle', { p_token: token });
     if (error || !data) return;
     const bundle = data as {
+      profile?: { track?: string | null; code?: string | null };
       progress?: number[];
       assignments?: { student_id: string }[];
       works?: { id: string; local_key?: string | null; title: string; date: string; tool: string | null; comment: string | null; link: string | null; photo: string | null }[];
     };
     const sid = studentId ?? bundle.assignments?.[0]?.student_id;
     if (!sid) return;
+    // 원장님이 서버에서 바꾼 수강 트랙·기질 코드를 학생 화면에도 그대로 반영합니다
+    if (bundle.profile?.track) {
+      this.db.profiles[sid] = { track: asTrack(bundle.profile.track, 'python'), code: bundle.profile.code ?? '' };
+    }
     if (bundle.progress?.length) {
       this.db.done[sid] = bundle.progress.slice().sort((a, b) => a - b);
     }
