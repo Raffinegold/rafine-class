@@ -66,7 +66,7 @@ export default function CodingHome() {
   const materialCount = materialPool.filter(
     (m) => m.published !== false && m.week === assignWeek && (m.track ? m.track === assignTrack : true)
   ).length;
-  const assignLabel = `${TRACK_META[profile.track].label} ${assignWeek}주차 ${assignSession}회차`;
+  const assignLabel = `${TRACK_META[assignTrack as keyof typeof TRACK_META]?.label ?? assignTrack} ${assignWeek}주차 ${assignSession}회차`;
   const thisWeek = plan.find((w) => w.week === nextWeek);
   const works = cls.worksFor(student.id).filter((w) => !!w.photo);
   const workCount = cls.worksFor(student.id).length;

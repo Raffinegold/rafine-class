@@ -133,7 +133,7 @@ export default function OneTouchBoard({
               </span>
             </p>
             <p className="mt-0.5 truncate text-[11.5px] font-semibold text-slate-500">
-              {trackMeta.emoji} {trackMeta.label} · {weekPlan?.title ?? '오늘 수업'} · {dateStr.replace(/-/g, '.')}
+              이번 주 배정 · {trackMeta.emoji} {trackMeta.label} · {weekPlan?.title ?? '오늘 수업'} · {dateStr.replace(/-/g, '.')}
             </p>
           </div>
         </div>
