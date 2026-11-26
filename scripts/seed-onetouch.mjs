@@ -101,10 +101,10 @@ await upsert('it_news', 'seed_key', seed.NEWS_SEED.map((n) => ({ ...n, visible: 
 const KID_TO_TEMPER = { 1: 'CHALLENGER', 2: 'CREATOR', 3: 'SYSTEMATIC', 4: 'EXPLORER' };
 const DEMO_STUDENTS = [
   { name: '김서연', code: 'RC-14E1', track: 'python' },
-  { name: '박준우', code: 'RC-22F6', track: 'roblox' },
-  { name: '이하은', code: 'RC-31E2', track: 'scratch' },
-  { name: '최민준', code: 'RC-43A8', track: 'unity' },
-  { name: '정유진', code: 'RC-12B4', track: 'scratch' },
+  { name: '박준우', code: 'RC-22F6', track: 'python' },
+  { name: '이하은', code: 'RC-31E2', track: 'python' },
+  { name: '최민준', code: 'RC-43A8', track: 'python' },
+  { name: '정유진', code: 'RC-12B4', track: 'python' },
 ];
 const studentsRes = await fetch(
   `${url}/rest/v1/students?select=id,name,temperament_type&active=eq.true`,
