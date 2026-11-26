@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '../app-context';
 import { useClassStore } from '../lib/classStore';
+import { store as vocaStore } from '../lib/store';
 import { TRACK_META, TRACK_LIST } from '../lib/curriculum';
 import { fileToCompressedPhoto, photoSizeKb } from '../lib/photo';
 import { cn, PAGE_W, todayStr } from '../lib/util';
@@ -29,6 +30,12 @@ export default function WorksPage() {
 
   const profile = student ? cls.profile(student.id, student.coding_level) : null;
   const works = student ? cls.worksFor(student.id) : [];
+
+  // 다른 기기에서 등록한 작품·기질 결과를 먼저 받아 옵니다
+  useEffect(() => {
+    if (student && vocaStore.studentToken) void cls.pullStudentCloud(vocaStore.studentToken, student.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.id]);
   const tools = useMemo(() => {
     if (!profile) return ['스크래치', '파이썬', '로블록스 스튜디오', '유니티'];
     return Array.from(new Set([...TOOLS_BY_TRACK[profile.track], ...TRACK_LIST.map((t) => t.label)]));

@@ -298,7 +298,7 @@ class ClassStore {
     };
     this.db.works = [work, ...this.db.works];
     this.commit();
-    if (this.studentToken) void this.pushStudentWork(work);
+    if (this.sessionToken) void this.pushStudentWork(work);
     else void this.pushWork(work);
     return work;
   }
@@ -306,7 +306,7 @@ class ClassStore {
   deleteWork(id: string) {
     this.db.works = this.db.works.filter((w) => w.id !== id);
     this.commit();
-    if (this.studentToken) void this.removeStudentWork(id);
+    if (this.sessionToken) void this.removeStudentWork(id);
     else void this.removeWorkCloud(id);
   }
 
@@ -374,6 +374,9 @@ class ClassStore {
   /** 원장 로그인 상태에서 켭니다. 끄면 지금처럼 localStorage 전용. */
   cloudEnabled = false;
 
+  /** 학생 로그인 토큰 (student_sessions) — 학생 화면에서 받은 작품을 서버에 올릴 때 씁니다 */
+  private sessionToken: string | null = null;
+
   private async pushProfile(studentId: string) {
     if (!this.cloudEnabled || !supabase) return;
     const p = this.db.profiles[studentId];
@@ -431,9 +434,9 @@ class ClassStore {
 
   /** 학생 기기에서 만든 작품을 서버에 올립니다 — 원장 화면·월말 리포트·다른 기기에도 보입니다 */
   private async pushStudentWork(w: Work) {
-    if (!supabase || !this.studentToken) return;
+    if (!supabase || !this.sessionToken) return;
     const { error } = await supabase.rpc('student_work_save', {
-      p_token: this.studentToken,
+      p_token: this.sessionToken,
       p_local_key: w.id,
       p_title: w.title,
       p_date: w.date,
@@ -446,8 +449,8 @@ class ClassStore {
   }
 
   private async removeStudentWork(id: string) {
-    if (!supabase || !this.studentToken) return;
-    const { error } = await supabase.rpc('student_work_delete', { p_token: this.studentToken, p_local_key: id });
+    if (!supabase || !this.sessionToken) return;
+    const { error } = await supabase.rpc('student_work_delete', { p_token: this.sessionToken, p_local_key: id });
     if (error) console.warn('[class] 학생 작품 삭제 실패', error.message);
   }
 
@@ -526,7 +529,9 @@ class ClassStore {
 
   /** 학생 기기에서 내 진도·작품을 받아옵니다 (수업 메모·교사 메모는 제외) */
   async pullStudentCloud(token: string, studentId?: string): Promise<void> {
-    if (!supabase || !token) return;
+    if (!token) return;
+    this.sessionToken = token;
+    if (!supabase) return;
     const { data, error } = await supabase.rpc('student_class_bundle', { p_token: token });
     if (error || !data) return;
     const bundle = data as {
