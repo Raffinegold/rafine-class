@@ -228,7 +228,10 @@ export default function AdminBoardPage() {
                       </p>
                       <p className="mt-0.5 text-[11px] text-slate-400">
                         {r.class_name ?? '-'} · {TRACK_META[r.profile_track as keyof typeof TRACK_META]?.label ?? r.profile_track} ·{' '}
-                        {TRACK_META[r.track as keyof typeof TRACK_META]?.label ?? r.track} {r.week}주 {r.session}회차
+                        {r.track !== r.profile_track
+                          ? `${TRACK_META[r.track as keyof typeof TRACK_META]?.label ?? r.track} `
+                          : ''}
+                        {r.week}주 {r.session}회차
                       </p>
                     </div>
                     {r.done_today ? (
