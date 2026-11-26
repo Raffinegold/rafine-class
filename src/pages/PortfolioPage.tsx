@@ -50,32 +50,34 @@ export default function PortfolioPage() {
   useEffect(() => {
     let alive = true;
     if (!student || !store) return () => undefined;
-    loadMyPortfolio(store)
-      .then((mp) => {
-        if (!alive) return;
-        setServer(mp);
-        const myWorks = cls.worksFor(student.id);
-        if (mp.portfolio) {
-          setTitle(mp.portfolio.title ?? `${student.name}의 코딩 포트폴리오`);
-          setIntro(mp.portfolio.intro ?? '');
-          const workTitles = new Set(mp.items.filter((i) => i.kind === 'work').map((i) => i.title));
-          setSelected(myWorks.filter((w) => workTitles.has(w.title)).map((w) => w.id));
-          setAwards(
-            mp.items
-              .filter((i) => i.kind === 'award')
-              .map((i, idx) => ({
-                key: `saved-${idx}`,
-                title: i.title,
-                awarded_by: i.awarded_by ?? '',
-                awarded_on: i.awarded_on ?? '',
-                image_url: i.image_url ?? '',
-              }))
-          );
-        } else {
-          setTitle(`${student.name}의 코딩 포트폴리오`);
-          setSelected(myWorks.slice(0, 4).map((w) => w.id));
-        }
-      })
+    (async () => {
+      // 다른 기기에서 등록한 작품도 불러온 뒤 포트폴리오를 엽니다
+      await cls.pullStudentCloud(store, student.id);
+      const mp = await loadMyPortfolio(store);
+      if (!alive) return;
+      setServer(mp);
+      const myWorks = cls.worksFor(student.id);
+      if (mp.portfolio) {
+        setTitle(mp.portfolio.title ?? `${student.name}의 코딩 포트폴리오`);
+        setIntro(mp.portfolio.intro ?? '');
+        const workTitles = new Set(mp.items.filter((i) => i.kind === 'work').map((i) => i.title));
+        setSelected(myWorks.filter((w) => workTitles.has(w.title)).map((w) => w.id));
+        setAwards(
+          mp.items
+            .filter((i) => i.kind === 'award')
+            .map((i, idx) => ({
+              key: `saved-${idx}`,
+              title: i.title,
+              awarded_by: i.awarded_by ?? '',
+              awarded_on: i.awarded_on ?? '',
+              image_url: i.image_url ?? '',
+            }))
+        );
+      } else {
+        setTitle(`${student.name}의 코딩 포트폴리오`);
+        setSelected(myWorks.slice(0, 4).map((w) => w.id));
+      }
+    })()
       .catch((err: Error) => alive && setLoadError(err.message))
       .finally(() => alive && setLoading(false));
     return () => {

@@ -157,7 +157,7 @@ export default function OneTouchBoard({
         </div>
       </header>
 
-      <div className="grid gap-3 p-3 sm:p-4 lg:grid-cols-[1.02fr_1.18fr_0.8fr] lg:items-stretch">
+      <div className="grid gap-3 p-3 sm:p-4 lg:grid-cols-[1.02fr_1.18fr_0.8fr] lg:items-start">
         {/* ---------------------------- ① 오늘 기본 이론 ---------------------------- */}
         <article className={cn('flex flex-col rounded-2xl border border-slate-100 p-3.5', read.theory ? 'bg-emerald-50/40' : 'bg-slate-50/60')}>
           <div className="flex items-center justify-between gap-2">

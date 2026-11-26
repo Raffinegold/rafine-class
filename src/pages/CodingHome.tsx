@@ -33,7 +33,7 @@ export default function CodingHome() {
 
   useEffect(() => {
     if (ms.mode === 'cloud' && store.studentToken) void ms.loadStudentCloud(store.studentToken);
-    if (ms.mode === 'cloud' && store.studentToken) void cls.pullStudentCloud(store.studentToken);
+    if (ms.mode === 'cloud' && store.studentToken) void cls.pullStudentCloud(store.studentToken, student?.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ms.mode, store.studentToken]);
 

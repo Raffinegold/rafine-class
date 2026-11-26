@@ -500,17 +500,41 @@ class ClassStore {
     this.commit();
   }
 
-  /** 학생 기기에서 내 진도만 받아옵니다 (수업 메모·교사 메모는 제외) */
-  async pullStudentCloud(token: string): Promise<void> {
+  /** 학생 기기에서 내 진도·작품을 받아옵니다 (수업 메모·교사 메모는 제외) */
+  async pullStudentCloud(token: string, studentId?: string): Promise<void> {
     if (!supabase || !token) return;
     const { data, error } = await supabase.rpc('student_class_bundle', { p_token: token });
     if (error || !data) return;
-    const bundle = data as { progress?: number[]; assignments?: { student_id: string }[] };
-    const sid = bundle.assignments?.[0]?.student_id;
-    if (sid && bundle.progress?.length) {
+    const bundle = data as {
+      progress?: number[];
+      assignments?: { student_id: string }[];
+      works?: { id: string; local_key?: string | null; title: string; date: string; tool: string | null; comment: string | null; link: string | null; photo: string | null }[];
+    };
+    const sid = studentId ?? bundle.assignments?.[0]?.student_id;
+    if (!sid) return;
+    if (bundle.progress?.length) {
       this.db.done[sid] = bundle.progress.slice().sort((a, b) => a - b);
-      this.commit();
     }
+    // 학생이 다른 기기에서 등록한 작품도 이어서 보이게 (없는 것만 합칩니다)
+    if (Array.isArray(bundle.works) && bundle.works.length) {
+      const known = new Set(this.db.works.map((w) => w.id));
+      bundle.works.forEach((w) => {
+        const id = w.local_key || w.id;
+        if (!id || known.has(id)) return;
+        this.db.works.push({
+          id,
+          student_id: sid,
+          title: w.title,
+          date: w.date,
+          tool: w.tool ?? '',
+          comment: w.comment ?? '',
+          link: w.link ?? '',
+          photo: w.photo ?? undefined,
+        });
+        known.add(id);
+      });
+    }
+    this.commit();
   }
 }
 

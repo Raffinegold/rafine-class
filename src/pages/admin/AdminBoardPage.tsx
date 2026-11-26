@@ -169,7 +169,7 @@ export default function AdminBoardPage() {
                             {r.name} <span className="text-[11px] font-semibold text-slate-400">{r.grade}학년</span>
                           </p>
                           <p className="text-[10.5px] text-slate-400">
-                            {r.class_name ?? '-'} · {TRACK_META[r.track as keyof typeof TRACK_META]?.label ?? r.track}
+                            {r.class_name ?? '-'} · {TRACK_META[r.profile_track as keyof typeof TRACK_META]?.label ?? r.profile_track}
                             {r.active ? '' : ' · 비활성'}
                           </p>
                         </td>
@@ -193,6 +193,9 @@ export default function AdminBoardPage() {
                           </p>
                         </td>
                         <td className="px-3 py-2.5 font-semibold text-slate-600">
+                          <span className="text-[11px] text-slate-400">
+                            {TRACK_META[r.track as keyof typeof TRACK_META]?.emoji} {TRACK_META[r.track as keyof typeof TRACK_META]?.label ?? r.track}
+                          </span>{' '}
                           {r.week}주 · {r.session}회차
                         </td>
                         <td className="px-3 py-2.5">
@@ -224,7 +227,8 @@ export default function AdminBoardPage() {
                         {r.name} <span className="text-[11px] font-semibold text-slate-400">{r.grade}학년</span>
                       </p>
                       <p className="mt-0.5 text-[11px] text-slate-400">
-                        {r.class_name ?? '-'} · {TRACK_META[r.track as keyof typeof TRACK_META]?.label ?? r.track} · {r.week}주 {r.session}회차
+                        {r.class_name ?? '-'} · {TRACK_META[r.profile_track as keyof typeof TRACK_META]?.label ?? r.profile_track} ·{' '}
+                        {TRACK_META[r.track as keyof typeof TRACK_META]?.label ?? r.track} {r.week}주 {r.session}회차
                       </p>
                     </div>
                     {r.done_today ? (

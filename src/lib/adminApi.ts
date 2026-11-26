@@ -16,6 +16,9 @@ export interface AdminBoardRow {
   coding_level: string;
   temperament_type: TemperamentType | null;
   temperament_code: string | null;
+  /** 수강 트랙 (class_profiles) */
+  profile_track: string;
+  /** 이번 주 배정 트랙 (material_assignments) */
   track: string;
   week: number;
   session: 1 | 2;
@@ -107,6 +110,7 @@ export async function loadBoard(): Promise<AdminBoardRow[]> {
       coding_level: s.coding_level,
       temperament_type: s.temperament_type as TemperamentType | null,
       temperament_code: s.temperament_code,
+      profile_track: trackOf.get(s.id) || defaultTrack(s.coding_level),
       track: (a?.track as string) || trackOf.get(s.id) || defaultTrack(s.coding_level),
       week: a?.week ?? 1,
       session: (a?.session as 1 | 2) ?? 1,
