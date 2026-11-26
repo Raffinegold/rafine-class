@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { SessionProvider, useSession, useVocaStore } from './app-context';
 import { SubjectProvider } from './subject-context';
 import { ToastProvider } from './components/ui';
@@ -14,6 +14,12 @@ import WorksPage from './pages/WorksPage';
 import ReviewHintsPage from './pages/ReviewHintsPage';
 import MaterialsPage from './pages/MaterialsPage';
 import ParentReportPage from './pages/ParentReportPage';
+import FeedPage from './pages/FeedPage';
+import PortfolioPage from './pages/PortfolioPage';
+import PublicPortfolioPage from './pages/PublicPortfolioPage';
+import AdminBoardPage from './pages/admin/AdminBoardPage';
+import AdminPortfolioPage from './pages/admin/AdminPortfolioPage';
+import AdminFeedPage from './pages/admin/AdminFeedPage';
 import { store } from './lib/store';
 
 function Splash() {
@@ -50,6 +56,12 @@ function HomeSwitch() {
   if (session?.role === 'student') return <StudentHome />;
   if (session?.role === 'admin') return <Navigate to="/admin" replace />;
   return <LoginPage />;
+}
+
+/** 학부모 공유용 포트폴리오 — 로그인 없이 토큰으로만 엽니다 */
+function PublicPortfolioRoute() {
+  const { token } = useParams<{ token: string }>();
+  return <PublicPortfolioPage token={token} />;
 }
 
 /** GitHub Pages 처럼 하위 경로에 배포될 때 라우터 기준 경로 (dev/루트 배포는 '/') */
@@ -117,6 +129,22 @@ export default function App() {
               }
             />
             <Route
+              path="/portfolio"
+              element={
+                <StudentRoute>
+                  <PortfolioPage />
+                </StudentRoute>
+              }
+            />
+            <Route
+              path="/feed"
+              element={
+                <StudentRoute>
+                  <FeedPage />
+                </StudentRoute>
+              }
+            />
+            <Route
               path="/hints"
               element={
                 <StudentRoute>
@@ -140,7 +168,33 @@ export default function App() {
                 </AdminRoute>
               }
             />
+            <Route
+              path="/admin/board"
+              element={
+                <AdminRoute>
+                  <AdminBoardPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/portfolio"
+              element={
+                <AdminRoute>
+                  <AdminPortfolioPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/feed"
+              element={
+                <AdminRoute>
+                  <AdminFeedPage />
+                </AdminRoute>
+              }
+            />
             <Route path="/r/:token" element={<ParentReportPage />} />
+            <Route path="/p/:token" element={<PublicPortfolioRoute />} />
+            <Route path="/portfolio/:token" element={<PublicPortfolioRoute />} />
             <Route path="/report/:token" element={<ParentReportPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

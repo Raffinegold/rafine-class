@@ -6,6 +6,7 @@ import StudentHeader from '../components/StudentHeader';
 import { Badge, Bar, Button, Card, SectionTitle } from '../components/ui';
 import { buildCodingMission, buildCodingReview, CODING_GAME_LIST, CODING_GAME_META, shuffleChoices, type CodingMissionItem } from '../lib/coding';
 import { useClassStore } from '../lib/classStore';
+import OneTouchBoard from '../components/student/OneTouchBoard';
 import { materialStore, useMaterialStore } from '../lib/materialStore';
 import { CURRICULUM, TRACK_META } from '../lib/curriculum';
 import { problemById } from '../data/codingSeed';
@@ -128,6 +129,14 @@ export default function CodingHome() {
             </div>
 
             {tab === 'today' ? (
+              <div className="space-y-3">
+                <OneTouchBoard
+                  student={student}
+                  token={store.studentToken}
+                  materials={materialPool}
+                  fallback={{ track: assignTrack, week: assignWeek, session: assignSession }}
+                />
+
               <div className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
                 {/* ------------------------------ 오늘의 코딩 미션 ------------------------------ */}
                 <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-950 p-5 text-white shadow-card lg:col-span-2">
@@ -351,6 +360,7 @@ export default function CodingHome() {
                   </p>
                 </Card>
                 </div>
+              </div>
               </div>
             ) : (
               <section className="space-y-4">

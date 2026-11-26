@@ -10,6 +10,7 @@ import type { CodingLevel, Subject } from '../../types';
 import MindPanel from '../../components/class/MindPanel';
 import MemoPanel from '../../components/class/MemoPanel';
 import ReportPanel from '../../components/class/ReportPanel';
+import AdminNav from '../../components/AdminNav';
 
 type Step = 'mind' | 'memo' | 'report';
 
@@ -57,13 +58,6 @@ export default function AdminClassPage() {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
-              <Link
-                to="/admin/tools"
-                className="rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-500 hover:bg-slate-50"
-                data-testid="admin-tools-link"
-              >
-                관리 도구
-              </Link>
               <button
                 onClick={logout}
                 className="rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-500 hover:bg-slate-50"
@@ -71,6 +65,9 @@ export default function AdminClassPage() {
                 나가기
               </button>
             </div>
+          </div>
+          <div className="mt-2">
+            <AdminNav active="home" />
           </div>
         </div>
       </header>

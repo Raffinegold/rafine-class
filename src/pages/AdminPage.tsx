@@ -5,6 +5,7 @@ import { parseWordCsv } from '../lib/csv';
 import { copyText } from '../lib/report';
 import MaterialsPanel from './admin/MaterialsPanel';
 import TeacherGuidesPanel from './admin/TeacherGuidesPanel';
+import AdminNav from '../components/AdminNav';
 import { LEVEL_META, CODING_LEVELS, CODING_LEVEL_META, type CodingLevel, type Level, type RedemptionRequest, type ShopItem, type Student, type Subject } from '../types';
 import { cn, formatKoTimestamp, todayStr } from '../lib/util';
 
@@ -106,6 +107,9 @@ export default function AdminPage() {
               나가기
             </button>
           </div>
+        </div>
+        <div className="mx-auto w-full max-w-3xl px-4 pb-2 md:max-w-6xl md:px-6 lg:max-w-7xl 2xl:max-w-[1500px]">
+          <AdminNav active="tools" />
         </div>
         <div className="mx-auto hidden w-full max-w-3xl gap-1 px-4 pb-2 md:flex md:max-w-6xl md:px-6 lg:max-w-7xl 2xl:max-w-[1500px]">
           {TABS.map((t) => (

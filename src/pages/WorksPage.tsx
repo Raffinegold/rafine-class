@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSession } from '../app-context';
 import { useClassStore } from '../lib/classStore';
 import { TRACK_META, TRACK_LIST } from '../lib/curriculum';
@@ -19,6 +20,7 @@ const TOOLS_BY_TRACK: Record<string, string[]> = {
 export default function WorksPage() {
   const cls = useClassStore();
   const { student, logout } = useSession();
+  const navigate = useNavigate();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ title: '', date: todayStr(), tool: '', comment: '', link: '' });
@@ -100,9 +102,18 @@ export default function WorksPage() {
           <p className="text-xs font-semibold text-white/70">{TRACK_META[profile.track].emoji} {TRACK_META[profile.track].label} 트랙</p>
           <h1 className="mt-1 text-2xl font-extrabold">{student.name}의 작품 {works.length}개</h1>
           <p className="mt-1 text-[13px] text-white/80">만든 것을 여기에 남겨 두면, 월말 학부모 리포트에 그대로 들어가요.</p>
-          <Button variant="sun" size="lg" className="mt-4 w-full lg:w-auto lg:min-w-[220px]" onClick={openForm} data-testid="work-add">
-            + 새 작품 등록
-          </Button>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <Button variant="sun" size="lg" className="w-full sm:w-auto sm:min-w-[200px]" onClick={openForm} data-testid="work-add">
+              + 새 작품 등록
+            </Button>
+            <button
+              onClick={() => navigate('/portfolio')}
+              data-testid="work-to-portfolio"
+              className="rounded-2xl border border-white/25 bg-white/10 px-4 py-3 text-sm font-bold text-white hover:bg-white/20"
+            >
+              🏅 작품·상장으로 포트폴리오 만들기
+            </button>
+          </div>
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">

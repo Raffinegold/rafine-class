@@ -3,6 +3,8 @@ import type { Student } from '../../types';
 import { useClassStore } from '../../lib/classStore';
 import { CURRICULUM, TRACK_META } from '../../lib/curriculum';
 import { KID_TRACK_RECOMMEND, fillTokens, maskText, parseMindCode } from '../../lib/mind';
+import { setTemperament } from '../../lib/adminApi';
+import { TEMPERAMENTS, TEMPERAMENT_LIST, type TemperamentType, temperamentFromMindCode } from '../../lib/temperament';
 import { cn } from '../../lib/util';
 import { Badge, Bar, Card, SectionTitle, useToast } from '../ui';
 
@@ -41,11 +43,69 @@ export default function MindPanel({ student }: { student: Student }) {
   const nextPlan = plan.find((w) => w.week === nextWeek);
   const pct = Math.round((done.length / 24) * 100);
 
+  /* -------- 라피네 학습 기질 4종 — 원클릭 오버라이드 (학생 맞춤 문제 기준) -------- */
+  const [temper, setTemper] = useState<TemperamentType | null>(student.temperament_type ?? null);
+  const [temperBusy, setTemperBusy] = useState(false);
+  useEffect(() => {
+    setTemper(student.temperament_type ?? null);
+  }, [student.id, student.temperament_type]);
+  const suggested = temperamentFromMindCode(profile.code);
+
+  const changeTemper = async (next: TemperamentType | null) => {
+    setTemperBusy(true);
+    try {
+      await setTemperament(student.id, next);
+      setTemper(next);
+      toast(next ? `${student.name} 학생을 ${TEMPERAMENTS[next].name}로 바꿨어요` : '기질을 비웠어요 — 기본 맞춤(체계형)으로 보입니다');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '기질을 바꾸지 못했어요', 'err');
+    } finally {
+      setTemperBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
       {/* -------------------------------- 기질 코드 -------------------------------- */}
       <Card className="space-y-3">
         <SectionTitle sub="rafine-mind 검사 결과 코드를 넣으면 바로 해석해요">기질 코드 (RC-XXXX)</SectionTitle>
+
+        <div className="rounded-2xl bg-slate-50 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11.5px] font-extrabold text-slate-700">학생 화면 맞춤 문제 기준</p>
+            {temper ? (
+              <span className={cn('rounded-full px-2 py-0.5 text-[10.5px] font-bold', TEMPERAMENTS[temper].chip)}>
+                {TEMPERAMENTS[temper].emoji} {TEMPERAMENTS[temper].name}
+              </span>
+            ) : (
+              <span className="rounded-full bg-white px-2 py-0.5 text-[10.5px] font-bold text-slate-400 ring-1 ring-slate-200">미설정</span>
+            )}
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+            {TEMPERAMENT_LIST.map((t) => {
+              const on = temper === t.key;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  disabled={temperBusy}
+                  onClick={() => void changeTemper(on ? null : t.key)}
+                  data-testid={`temper-${t.key}`}
+                  title={`${t.name} · ${t.tagline}`}
+                  className={cn(
+                    'rounded-xl px-2 py-1.5 text-[11px] font-bold transition',
+                    on ? t.solid : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-100'
+                  )}
+                >
+                  {t.emoji} {t.name}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-[10.5px] leading-relaxed text-slate-500">
+            한 번 더 누르면 비워집니다. {suggested ? `RC 코드 기준 추천: ${TEMPERAMENTS[suggested].name}` : 'RC 코드를 넣으면 추천 기질이 표시돼요.'}
+          </p>
+        </div>
         <input
           data-testid="mind-code-input"
           value={draft}

@@ -17,6 +17,10 @@ export interface Student {
   coding_level: CodingLevel;
   /** 원장님이 열어 준 수강 과목 — 이 중에서만 학생 화면 탭이 보입니다 */
   enabled_subjects: Subject[];
+  /** 라피네 학습 기질 4종 (students.temperament_type · 원장이 언제든 바꿀 수 있음) */
+  temperament_type?: 'SYSTEMATIC' | 'EXPLORER' | 'CREATOR' | 'CHALLENGER' | null;
+  /** rafine-mind 결과 코드 (예: RC-0K4X) */
+  temperament_code?: string | null;
 }
 
 export interface WordSet {
