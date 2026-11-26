@@ -298,14 +298,16 @@ class ClassStore {
     };
     this.db.works = [work, ...this.db.works];
     this.commit();
-    void this.pushWork(work);
+    if (this.studentToken) void this.pushStudentWork(work);
+    else void this.pushWork(work);
     return work;
   }
 
   deleteWork(id: string) {
     this.db.works = this.db.works.filter((w) => w.id !== id);
     this.commit();
-    void this.removeWorkCloud(id);
+    if (this.studentToken) void this.removeStudentWork(id);
+    else void this.removeWorkCloud(id);
   }
 
   /* ------------------------------ 24주 진도 ------------------------------ */
@@ -425,6 +427,28 @@ class ClassStore {
   private async removeWorkCloud(id: string) {
     if (!this.cloudEnabled || !supabase) return;
     await supabase.from('student_works').delete().eq('local_key', id);
+  }
+
+  /** 학생 기기에서 만든 작품을 서버에 올립니다 — 원장 화면·월말 리포트·다른 기기에도 보입니다 */
+  private async pushStudentWork(w: Work) {
+    if (!supabase || !this.studentToken) return;
+    const { error } = await supabase.rpc('student_work_save', {
+      p_token: this.studentToken,
+      p_local_key: w.id,
+      p_title: w.title,
+      p_date: w.date,
+      p_tool: w.tool,
+      p_comment: w.comment,
+      p_link: w.link,
+      p_photo: w.photo ?? null,
+    });
+    if (error) console.warn('[class] 학생 작품 저장 실패', error.message);
+  }
+
+  private async removeStudentWork(id: string) {
+    if (!supabase || !this.studentToken) return;
+    const { error } = await supabase.rpc('student_work_delete', { p_token: this.studentToken, p_local_key: id });
+    if (error) console.warn('[class] 학생 작품 삭제 실패', error.message);
   }
 
   private async pushCounselor(studentId: string, month: string, text: string) {
