@@ -131,3 +131,41 @@ npm run build          # tsc --noEmit + vite build + 404.html 생성
 
 - 시드 정답은 학원 수업 자료의 출발점이라 공개 저장소에 그대로 두었습니다. 정답을 감추고 싶은 자료는 **화면에서 새로 등록**하면 서버에만 저장됩니다.
 - 학생 API 응답에는 `teacher_guide`·`answer_code` 필드 자체가 없습니다(2026-11-20 anon 키로 직접 확인).
+
+## 9. 원터치화 1단계 추가 객체 (2026-11-26)
+
+### 테이블 7개 + 학생 컬럼 3개
+
+| 객체 | 역할 |
+| --- | --- |
+| `students.temperament_type` `temperament_code` `temperament_updated_at` | 라피네 학습 기질 4종(`SYSTEMATIC`·`EXPLORER`·`CREATOR`·`CHALLENGER`) |
+| `temperament_results` | rafine-mind 검사 저장 이력(아이 유형·4축 점수·아이만 코드) |
+| `temperament_missions` | 과정·주차·회차 × 기질 × (숙제·문제·팁) = 96건 |
+| `lesson_completions` | 학생 ‘오늘 수업 완료’ 체크(학생·날짜 PK) |
+| `competitions` `it_news` | 대회·IT뉴스 피드(노출 ON/OFF) |
+| `portfolios` `portfolio_items` | 작품·상장 포트폴리오(학생 1명당 1개 · 승인 후 `share_token`) |
+
+### RPC
+
+| RPC | 실행 권한 | 하는 일 |
+| --- | --- | --- |
+| `student_today_bundle(token)` | anon | 오늘의 원터치(배정·기질 미션·완료·진도·포트폴리오 상태) |
+| `student_complete_lesson(token, done)` | anon | 오늘 수업 완료/해제 (한국 시간 기준 날짜) |
+| `student_portfolio_save(token, title, intro, items)` | anon | 승인 요청(pending) · 사진 800KB·항목 12개 제한 |
+| `student_portfolio_get(token)` | anon | 내 포트폴리오 + 검토 메모 |
+| `portfolio_public(share_token)` | anon | **승인된 것만** 이름·학년·과정·작품·상장 |
+| `student_work_save / student_work_delete(token, …)` | anon | 학생이 등록한 작품을 서버에 저장/삭제 |
+| `mind_submit(name, pin, kid, …)` | anon | 이름+PIN 확인 후 검사 저장 · 1시간 10회 제한 |
+| `admin_set_temperament(id, type)` | authenticated(원장) | 기질 원클릭 변경(빈 값이면 해제) |
+| `admin_review_portfolio(id, action, note)` | authenticated(원장) | 승인(공유 토큰 생성)/반려 |
+
+- SQL 파일: `supabase/onetouch.sql` → `supabase/onetouch-seedkey.sql` → `supabase/student-works.sql`
+- 시드: `ADMIN_ACCESS_TOKEN=<원장 JWT> node scripts/seed-onetouch.mjs` (미션 96·대회 8·뉴스 5·데모 기질)
+- 데모 학생은 파이썬 1~4주 시범으로 통일했습니다. 실사용에서는 `관리 도구 → 수업자료 → 학생 배정`에서 트랙을 바꿉니다.
+
+### 확인한 보안 경계 (2026-11-26)
+
+- anon 키로 `portfolios`·`temperament_results`·`lesson_completions` 직접 조회 → **401/42501 차단**
+- anon이 `admin_set_temperament` 호출 → **권한 없음(42501)**
+- `portfolio_public` 응답에 PIN·전화·`parent_token`·`student_id` **없음**
+- `student_login`·`student_bundle` 응답에서 `parent_token` 제거
