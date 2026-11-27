@@ -287,16 +287,16 @@ class MaterialStore {
     return true;
   }
 
-  /** 학생별 과정·주차·회차 배정 */
+  /** 학생별 과정·주차·회차 배정 — memo 를 넘기지 않으면 기존 메모를 덮어쓰지 않습니다 */
   async setAssignment(studentId: string, track: Track, week: number, session: 1 | 2, memo?: string): Promise<boolean> {
-    const payload = {
+    const payload: { student_id: string; track: string; week: number; session: 1 | 2; memo?: string | null; updated_at: string } = {
       student_id: studentId,
       track: asTrack(track),
       week,
       session,
-      memo: memo ?? null,
       updated_at: new Date().toISOString(),
     };
+    if (memo !== undefined) payload.memo = memo;
     if (this.mode === 'cloud' && supabase) {
       const { error } = await supabase.from('material_assignments').upsert(payload);
       if (error) {
@@ -308,7 +308,7 @@ class MaterialStore {
       await this.loadAdminCloud();
       return true;
     }
-    this.db.assignments[studentId] = payload;
+    this.db.assignments[studentId] = { ...payload, memo: payload.memo ?? null } as MaterialAssignment;
     this.persistLocal();
     this.assignments = Object.values(this.db.assignments);
     this.emit();
