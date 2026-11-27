@@ -183,6 +183,8 @@ class VocaStore {
   settings: AppSettings = { cash_daily_limit: DEFAULT_CASH_DAILY_LIMIT };
   ready: Promise<void>;
   adminEmail: string | null = null;
+  /** Supabase 원장 로그인 상태 — 'signed-out' 이면 세션이 끊긴 것(만료 포함)입니다 */
+  adminAuth: 'signed-in' | 'signed-out' = 'signed-out';
   lastCloudError: string | null = null;
   studentToken: string | null = null;
 
@@ -222,6 +224,7 @@ class VocaStore {
           }
         }
         this.adminEmail = session.data.session?.user?.email ?? null;
+        this.adminAuth = session.data.session?.user ? 'signed-in' : 'signed-out';
         // 로그인 전(anon)에는 students 등 개인정보 테이블을 읽을 수 없습니다.
         // 그 실패로 앱 전체를 데모 모드로 떨어뜨리지 않고, 로그인 후에 다시 읽습니다.
         try {
@@ -243,6 +246,7 @@ class VocaStore {
         // 로그인/로그아웃 이벤트에서 원장 데이터를 다시 읽습니다 (새로고침 후에도 유지)
         this.client.auth.onAuthStateChange((_event, session) => {
           this.adminEmail = session?.user?.email ?? null;
+          this.adminAuth = session?.user ? 'signed-in' : 'signed-out';
           if (session?.user) {
             void this.loadCloud()
               .then(() => this.emit())
@@ -1615,6 +1619,7 @@ class VocaStore {
     const { data, error } = await this.client.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
     this.adminEmail = data.user?.email ?? null;
+    this.adminAuth = data.session ? 'signed-in' : 'signed-out';
     if (data.session) saveSession(data.session);
     await this.loadCloud();
     this.emit();
@@ -1638,6 +1643,7 @@ class VocaStore {
       mode: this.mode,
       hasClient: Boolean(this.client),
       adminEmail: this.adminEmail,
+      adminAuth: this.adminAuth,
       gotrueEmail,
       gotrueError,
       savedSession: Boolean(readSavedSession()),
@@ -1650,7 +1656,34 @@ class VocaStore {
     if (this.mode === 'supabase' && this.client) {
       await this.client.auth.signOut();
       this.adminEmail = null;
+      this.adminAuth = 'signed-out';
       clearSavedSession();
+    }
+  }
+
+  /**
+   * 원장 화면에서 ‘다시 시도’ — 세션이 살아 있는지 확인하고 데이터를 다시 읽습니다.
+   * 세션이 끊겼으면 adminAuth 가 'signed-out' 으로 남아 화면이 재로그인을 안내합니다.
+   */
+  async retryCloud(): Promise<{ ok: boolean; error: string | null }> {
+    if (!this.client || this.mode !== 'supabase') return { ok: false, error: '서버 연결이 없어요' };
+    try {
+      const { data } = await this.client.auth.getSession();
+      this.adminEmail = data.session?.user?.email ?? null;
+      this.adminAuth = data.session?.user ? 'signed-in' : 'signed-out';
+      if (!data.session?.user) {
+        this.lastCloudError = '로그인 세션이 만료됐어요';
+        this.emit();
+        return { ok: false, error: this.lastCloudError };
+      }
+      await this.loadCloud();
+      this.lastCloudError = null;
+      this.emit();
+      return { ok: true, error: null };
+    } catch (err) {
+      this.lastCloudError = err instanceof Error ? err.message : String(err);
+      this.emit();
+      return { ok: false, error: this.lastCloudError };
     }
   }
 
@@ -1693,6 +1726,7 @@ class VocaStore {
     ]);
     const firstError = [students, sets, words, asgs, logs, notes, reports, hist].find((r) => r.error);
     if (firstError?.error) throw firstError.error;
+    this.lastCloudError = null;
 
     this.students = (students.data ?? []) as any;
     this.sets = (sets.data ?? []) as any;

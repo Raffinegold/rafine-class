@@ -132,6 +132,7 @@ create table if not exists public.portfolios (
   intro text,
   share_token text unique,
   review_note text,
+  teacher_note text,                           -- 학부모 공유 링크에 보이는 원장 한 줄 코멘트
   reviewed_at timestamptz,
   view_count integer not null default 0,
   created_at timestamptz not null default now(),
@@ -504,6 +505,7 @@ begin
     'track', v_track,
     'title', v_p.title,
     'intro', v_p.intro,
+    'teacher_note', v_p.teacher_note,
     'approved_at', v_p.reviewed_at,
     'items', coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -612,6 +614,29 @@ begin
 end;
 $$;
 
+-- 학부모 공유 링크에 보일 ‘원장 한 줄 코멘트’ 저장 (승인 상태와 무관하게 코멘트만 바꿈)
+create or replace function public.admin_set_portfolio_note(p_id uuid, p_note text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_note text;
+begin
+  if not public.is_admin() then raise exception 'NOT_ADMIN'; end if;
+  v_note := nullif(left(trim(coalesce(p_note, '')), 120), '');
+
+  update public.portfolios
+     set teacher_note = v_note,
+         updated_at = now()
+   where id = p_id;
+  if not found then raise exception 'PORTFOLIO_NOT_FOUND'; end if;
+
+  return jsonb_build_object('ok', true, 'teacher_note', v_note);
+end;
+$$;
+
 create or replace function public.admin_review_portfolio(p_id uuid, p_action text, p_note text default null)
 returns jsonb
 language plpgsql
@@ -661,6 +686,7 @@ revoke all on function public.portfolio_public(text) from public;
 revoke all on function public.mind_submit(text, text, text, text, jsonb, jsonb) from public;
 revoke all on function public.admin_set_temperament(uuid, text) from public;
 revoke all on function public.admin_review_portfolio(uuid, text, text) from public;
+revoke all on function public.admin_set_portfolio_note(uuid, text) from public;
 
 grant execute on function public.student_today_bundle(text) to anon, authenticated;
 grant execute on function public.student_complete_lesson(text, boolean) to anon, authenticated;
@@ -670,6 +696,7 @@ grant execute on function public.portfolio_public(text) to anon, authenticated;
 grant execute on function public.mind_submit(text, text, text, text, jsonb, jsonb) to anon, authenticated;
 grant execute on function public.admin_set_temperament(uuid, text) to authenticated;
 grant execute on function public.admin_review_portfolio(uuid, text, text) to authenticated;
+grant execute on function public.admin_set_portfolio_note(uuid, text) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 11) 학생 로그인 응답에서 parent_token(학부모 리포트 열쇠) 제거

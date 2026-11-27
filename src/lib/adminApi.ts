@@ -38,6 +38,8 @@ export interface AdminPortfolioRow {
   status: 'pending' | 'approved' | 'rejected';
   title: string | null;
   intro: string | null;
+  /** 학부모 공유 화면에 보이는 원장 한 줄 코멘트 (DB 적용 전에는 null) */
+  teacher_note?: string | null;
   share_token: string | null;
   review_note: string | null;
   reviewed_at: string | null;
@@ -170,8 +172,7 @@ export async function loadPortfolios(status?: AdminPortfolioRow['status']): Prom
   ]);
   if (items.error) throw new Error(items.error.message);
   const studentOf = new Map((students.data ?? []).map((s: { id: string; name: string; grade: number }) => [s.id, s]));
-  const itemsOf = new Map<string, PortfolioItem[]>();
-  (items.data ?? []).forEach((i: PortfolioItem & { portfolio_id: string }) => {
+  const itemsOf = new Map<string, PortfolioItem[]>();  (items.data ?? []).forEach((i: PortfolioItem & { portfolio_id: string }) => {
     const arr = itemsOf.get(i.portfolio_id) ?? [];
     arr.push({
       kind: i.kind,
@@ -185,12 +186,40 @@ export async function loadPortfolios(status?: AdminPortfolioRow['status']): Prom
     itemsOf.set(i.portfolio_id, arr);
   });
 
-  return rows.map((r: Omit<AdminPortfolioRow, 'student_name' | 'grade' | 'items'>) => ({
+  // 원장 한 줄 코멘트는 DB 패치(patch-portfolio-teacher-note.sql) 적용 전에는 컬럼이 없어 실패합니다.
+  // 그래도 승인함 자체는 열려야 하므로 따로 읽고, 없으면 빈 값으로 둡니다.
+  const noteOf = new Map<string, string | null>();
+  try {
+    const notes = await db.from('portfolios').select('id,teacher_note').in('id', ids);
+    (notes.data ?? []).forEach((n: { id: string; teacher_note: string | null }) => noteOf.set(n.id, n.teacher_note));
+  } catch {
+    /* 컬럼 미적용 — 무시 */
+  }
+
+  return rows.map((r: Omit<AdminPortfolioRow, 'student_name' | 'grade' | 'items' | 'teacher_note'>) => ({
     ...r,
     student_name: studentOf.get(r.student_id)?.name ?? '(이름 없음)',
     grade: studentOf.get(r.student_id)?.grade ?? null,
+    teacher_note: noteOf.get(r.id) ?? null,
     items: itemsOf.get(r.id) ?? [],
   }));
+}
+
+/**
+ * 학부모 공유 링크에 보일 ‘원장 한 줄 코멘트’ 저장.
+ * portfolios.teacher_note 컬럼 + admin_set_portfolio_note RPC 가 필요합니다.
+ */
+export async function savePortfolioNote(id: string, note: string): Promise<void> {
+  const { error } = await client().rpc('admin_set_portfolio_note', {
+    p_id: id,
+    p_note: note.trim() || null,
+  });
+  if (error) {
+    if (/Could not find the function|schema cache|does not exist/i.test(error.message)) {
+      throw new Error('아직 준비 중이에요 — DB에 teacher_note 컬럼·RPC를 먼저 적용해야 저장됩니다(자비스에게 요청).');
+    }
+    throw new Error(error.message);
+  }
 }
 
 export async function reviewPortfolio(

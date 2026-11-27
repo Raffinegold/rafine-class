@@ -60,6 +60,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     // 학생 토큰도 함께 지웁니다 — 다음 학생 화면에 이전 학생 자료가 이어지지 않게
     store.clearStudentToken();
+    // 서버 로그인 세션도 함께 끊습니다 (기기에 원장 역할만 남는 상태를 막습니다)
+    void store.adminSignOut();
     persist(null);
   }, [persist]);
 

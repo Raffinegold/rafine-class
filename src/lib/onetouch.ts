@@ -70,6 +70,8 @@ export interface PublicPortfolio {
   track: Track;
   title: string | null;
   intro: string | null;
+  /** 원장 한 줄 코멘트 — DB(patch-portfolio-teacher-note.sql) 적용 후 내려옵니다 */
+  teacher_note?: string | null;
   approved_at: string | null;
   items: PortfolioItem[];
 }

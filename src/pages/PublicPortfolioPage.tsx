@@ -92,8 +92,16 @@ export default function PublicPortfolioPage({ token }: { token?: string }) {
           </header>
 
           <div className="px-4 py-5 sm:px-8 sm:py-7">
+            {data.teacher_note ? (
+              <div className="rounded-2xl border border-brand-100 bg-brand-50/70 px-4 py-3.5" data-testid="public-teacher-note">
+                <p className="text-[11px] font-extrabold tracking-wide text-brand-700">선생님이 남긴 한 줄</p>
+                <p className="mt-1 whitespace-pre-line text-[13.5px] leading-relaxed text-slate-700">{data.teacher_note}</p>
+                <p className="mt-1.5 text-[10.5px] font-bold text-brand-700/70">박종혁 원장</p>
+              </div>
+            ) : null}
+
             {data.intro ? (
-              <p className="whitespace-pre-line rounded-2xl bg-slate-50 px-4 py-3 text-[13.5px] leading-relaxed text-slate-700">
+              <p className="mt-4 whitespace-pre-line rounded-2xl bg-slate-50 px-4 py-3 text-[13.5px] leading-relaxed text-slate-700">
                 {data.intro}
               </p>
             ) : null}
@@ -173,10 +181,45 @@ export default function PublicPortfolioPage({ token }: { token?: string }) {
                 천안시 서북구 부성1길 19, 3층 · 041-564-1101 · 24주 코딩 커리큘럼과 작품 기록
               </p>
             </div>
+
+            {/* 다음 행동 — 상담으로 이어지게 */}
+            <section className="mt-3 rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50 to-white px-4 py-4">
+              <p className="text-[13.5px] font-extrabold leading-snug text-slate-900">
+                {data.student_name}의 다음 작품, 같이 만들어 볼까요?
+              </p>
+              <p className="mt-1 text-[11.5px] leading-relaxed text-slate-600">
+                수업 기록이 궁금하거나 진로·트랙 상담이 필요하면 카톡으로 편하게 물어보세요. 원장이 직접 답합니다.
+              </p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <a
+                  href="https://pf.kakao.com/_NPJhG"
+                  target="_blank"
+                  rel="noreferrer"
+                  data-testid="public-kakao-cta"
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[#FEE500] px-4 py-2.5 text-[13px] font-extrabold text-[#3C1E1E] shadow-sm active:scale-[0.98]"
+                >
+                  💬 카톡 채널로 상담하기
+                </a>
+                <a
+                  href="tel:0415641101"
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-white px-4 py-2.5 text-[13px] font-extrabold text-slate-700 ring-1 ring-slate-200 active:scale-[0.98]"
+                >
+                  📞 041-564-1101
+                </a>
+              </div>
+            </section>
           </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-center gap-2 no-print">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 no-print">
+          <a
+            href="https://pf.kakao.com/_NPJhG"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full bg-[#FEE500] px-4 py-2 text-[12px] font-extrabold text-[#3C1E1E] shadow-sm active:scale-[0.98]"
+          >
+            💬 카톡 상담
+          </a>
           <button
             onClick={() => window.print()}
             className="rounded-full bg-white px-4 py-2 text-[12px] font-bold text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"

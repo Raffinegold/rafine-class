@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSession } from '../../app-context';
 import AdminNav from '../../components/AdminNav';
 import { Button, Card, Modal, useToast } from '../../components/ui';
-import { loadPortfolios, reviewPortfolio, type AdminPortfolioRow } from '../../lib/adminApi';
+import { loadPortfolios, reviewPortfolio, savePortfolioNote, type AdminPortfolioRow } from '../../lib/adminApi';
 import { appBaseUrl } from '../../lib/report';
 import { cn, PAGE_W_WIDE } from '../../lib/util';
 
@@ -38,6 +38,8 @@ export default function AdminPortfolioPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<AdminPortfolioRow | null>(null);
   const [rejectNote, setRejectNote] = useState('');
+  const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
+  const [noteBusyId, setNoteBusyId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -98,6 +100,20 @@ export default function AdminPortfolioPage() {
       toast(err instanceof Error ? err.message : '반려하지 못했어요', 'err');
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const saveNote = async (row: AdminPortfolioRow) => {
+    const text = noteDraft[row.id] ?? row.teacher_note ?? '';
+    setNoteBusyId(row.id);
+    try {
+      await savePortfolioNote(row.id, text);
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, teacher_note: text.trim() || null } : r)));
+      toast(text.trim() ? '학부모 링크에 한 줄 코멘트를 넣었어요' : '코멘트를 비웠어요');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '코멘트를 저장하지 못했어요', 'err');
+    } finally {
+      setNoteBusyId(null);
     }
   };
 
@@ -224,6 +240,28 @@ export default function AdminPortfolioPage() {
 
                   {row.review_note ? (
                     <p className="rounded-xl bg-rose-50 px-3 py-2 text-[11.5px] text-rose-700">반려 사유: {row.review_note}</p>
+                  ) : null}
+
+                  {row.status === 'approved' ? (
+                    <div className="rounded-xl bg-brand-50/60 px-2.5 py-2 ring-1 ring-brand-100" data-testid={`portfolio-note-${row.student_name}`}>
+                      <p className="text-[10.5px] font-extrabold text-brand-700">학부모 링크의 ‘원장 한 줄’</p>
+                      <div className="mt-1 flex gap-1.5">
+                        <input
+                          value={noteDraft[row.id] ?? row.teacher_note ?? ''}
+                          onChange={(e) => setNoteDraft((prev) => ({ ...prev, [row.id]: e.target.value }))}
+                          maxLength={80}
+                          placeholder="예) 이번 달 디버깅을 혼자 끝냈어요."
+                          className="min-w-0 flex-1 rounded-lg border border-brand-100 bg-white px-2.5 py-1.5 text-[12px] text-slate-700 outline-none focus:border-brand-400"
+                        />
+                        <button
+                          onClick={() => void saveNote(row)}
+                          disabled={noteBusyId === row.id}
+                          className="shrink-0 rounded-lg bg-brand-600 px-2.5 py-1 text-[10.5px] font-bold text-white hover:bg-brand-700 disabled:opacity-40"
+                        >
+                          {noteBusyId === row.id ? '저장 중…' : '저장'}
+                        </button>
+                      </div>
+                    </div>
                   ) : null}
 
                   {row.status === 'approved' && shareUrl ? (

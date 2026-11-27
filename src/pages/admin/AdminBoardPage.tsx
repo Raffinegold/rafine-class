@@ -5,7 +5,8 @@ import AdminNav from '../../components/AdminNav';
 import { Card, useToast } from '../../components/ui';
 import { loadBoard, setTemperament, type AdminBoardRow } from '../../lib/adminApi';
 import { TEMPERAMENTS, TEMPERAMENT_LIST, type TemperamentType } from '../../lib/temperament';
-import { TRACK_META } from '../../lib/curriculum';
+import { TRACK_META, type Track } from '../../lib/curriculum';
+import { materialStore } from '../../lib/materialStore';
 import { cn, PAGE_W_WIDE } from '../../lib/util';
 
 export default function AdminBoardPage() {
@@ -17,6 +18,7 @@ export default function AdminBoardPage() {
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [advancingId, setAdvancingId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [onlyActive, setOnlyActive] = useState(true);
 
@@ -67,6 +69,23 @@ export default function AdminBoardPage() {
       toast(err instanceof Error ? err.message : '기질을 바꾸지 못했어요', 'err');
     } finally {
       setBusyId(null);
+    }
+  };
+
+  /** 이번 주 2회차까지 끝난 학생을 다음 주 1회차 배정으로 한 번에 넘깁니다 */
+  const advanceWeek = async (row: AdminBoardRow) => {
+    if (row.week >= 24) return;
+    const next = row.week + 1;
+    setAdvancingId(row.id);
+    try {
+      const ok = await materialStore.setAssignment(row.id, row.track as Track, next, 1);
+      if (!ok) throw new Error(materialStore.error ?? '배정을 바꾸지 못했어요');
+      await refresh();
+      toast(`${row.name} → ${next}주차 1회차 배정으로 넘겼어요`);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '배정을 바꾸지 못했어요', 'err');
+    } finally {
+      setAdvancingId(null);
     }
   };
 
@@ -139,7 +158,26 @@ export default function AdminBoardPage() {
         {error ? (
           <Card className="mt-3 bg-rose-50/70">
             <p className="text-sm font-bold text-rose-700">{error}</p>
-            <p className="mt-1 text-[12px] text-rose-600">원장 계정으로 로그인했는지 확인해 주세요.</p>
+            <p className="mt-1 text-[12px] text-rose-600">
+              학생이 없는 것이 아니라, 로그인·권한 때문에 목록을 못 읽은 상태일 수 있어요. 원장 계정으로 다시 로그인해 주세요.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button
+                onClick={() => {
+                  logout();
+                  navigate('/');
+                }}
+                className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-rose-700 ring-1 ring-rose-200 hover:bg-rose-100"
+              >
+                다시 로그인
+              </button>
+              <button
+                onClick={() => void refresh()}
+                className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+              >
+                다시 시도
+              </button>
+            </div>
           </Card>
         ) : null}
 
@@ -197,6 +235,23 @@ export default function AdminBoardPage() {
                             {TRACK_META[r.track as keyof typeof TRACK_META]?.emoji} {TRACK_META[r.track as keyof typeof TRACK_META]?.label ?? r.track}
                           </span>{' '}
                           {r.week}주 · {r.session}회차
+                          {r.session === 2 && r.week < 24 ? (
+                            <button
+                              type="button"
+                              onClick={() => void advanceWeek(r)}
+                              disabled={advancingId === r.id}
+                              data-testid={`board-advance-${r.name}`}
+                              title={`${r.name} 학생을 ${r.week + 1}주차 1회차 배정으로 넘깁니다`}
+                              className={cn(
+                                'ml-1 rounded-full px-2 py-0.5 text-[10px] font-bold transition disabled:opacity-40',
+                                r.done_today
+                                  ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                  : 'bg-slate-100 text-slate-500 hover:bg-brand-50 hover:text-brand-700'
+                              )}
+                            >
+                              {advancingId === r.id ? '넘기는 중…' : `다음 주(${r.week + 1}주)로 →`}
+                            </button>
+                          ) : null}
                         </td>
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-1.5">
@@ -233,6 +288,19 @@ export default function AdminBoardPage() {
                           : ''}
                         {r.week}주 {r.session}회차
                       </p>
+                      {r.session === 2 && r.week < 24 ? (
+                        <button
+                          type="button"
+                          onClick={() => void advanceWeek(r)}
+                          disabled={advancingId === r.id}
+                          className={cn(
+                            'mt-1 rounded-full px-2.5 py-1 text-[10.5px] font-bold disabled:opacity-40',
+                            r.done_today ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                          )}
+                        >
+                          {advancingId === r.id ? '넘기는 중…' : `2회차 끝 → ${r.week + 1}주차로 배정`}
+                        </button>
+                      ) : null}
                     </div>
                     {r.done_today ? (
                       <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10.5px] font-bold text-emerald-700">✓ 오늘 완료</span>
@@ -259,6 +327,8 @@ export default function AdminBoardPage() {
 
         <p className="mt-3 px-1 text-[10.5px] leading-relaxed text-slate-400">
           학생이 ‘오늘 수업 완료’를 누르면 20초 안에 이 보드에 반영됩니다. 기질은 검사 결과와 상관없이 원장님이 언제든 바꿀 수 있고, 바꾸면 학생 화면의 맞춤 문제도 바로 바뀝니다.
+          <br />
+          배정이 ‘2회차’인 학생에게는 <b>다음 주로 넘기는 버튼</b>이 붙습니다. 한 번 누르면 배정 주차가 +1 되고 1회차로 시작합니다(되돌리려면 관리 도구 → 수업자료에서 바꿀 수 있어요).
         </p>
       </main>
     </div>

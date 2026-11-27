@@ -21,6 +21,7 @@ import AdminBoardPage from './pages/admin/AdminBoardPage';
 import AdminPortfolioPage from './pages/admin/AdminPortfolioPage';
 import AdminFeedPage from './pages/admin/AdminFeedPage';
 import { store } from './lib/store';
+import { AdminSessionExpired } from './components/AdminAuthGate';
 
 function Splash() {
   return (
@@ -47,7 +48,10 @@ function StudentRoute({ children }: { children: JSX.Element }) {
 
 function AdminRoute({ children }: { children: JSX.Element }) {
   const { session } = useSession();
+  const voca = useVocaStore();
   if (session?.role !== 'admin') return <Navigate to="/" replace />;
+  // 기기에 원장 역할만 남고 서버 로그인(세션)이 끊긴 경우 — 빈 목록 대신 재로그인 안내
+  if (voca.mode === 'supabase' && voca.adminAuth === 'signed-out') return <AdminSessionExpired />;
   return children;
 }
 

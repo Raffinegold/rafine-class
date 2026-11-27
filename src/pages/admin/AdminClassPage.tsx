@@ -11,6 +11,7 @@ import MindPanel from '../../components/class/MindPanel';
 import MemoPanel from '../../components/class/MemoPanel';
 import ReportPanel from '../../components/class/ReportPanel';
 import AdminNav from '../../components/AdminNav';
+import { AdminCloudErrorBanner } from '../../components/AdminAuthGate';
 
 type Step = 'mind' | 'memo' | 'report';
 
@@ -44,6 +45,8 @@ export default function AdminClassPage() {
   }, [activeStudents, selectedId]);
 
   const student = activeStudents.find((s) => s.id === selectedId) ?? activeStudents[0] ?? null;
+  // 목록을 못 읽은 상태(권한·세션)에서 ‘새 학생’을 누르면 중복 등록이 생깁니다 — 막아 둡니다
+  const cloudBlocked = store.mode === 'supabase' && !!store.lastCloudError;
 
   return (
     <div className="min-h-screen bg-slate-50/60 pb-16">
@@ -73,6 +76,7 @@ export default function AdminClassPage() {
       </header>
 
       <main className={cn(PAGE_W_WIDE, 'pt-4')}>
+        <AdminCloudErrorBanner className="mb-3" />
         {/* 넓은 화면: 왼쪽에 ‘오늘 볼 학생’ 고정, 오른쪽에 1·2·3 단계 패널 */}
         <div className="lg:grid lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:items-start lg:gap-4">
         {/* ------------------------------ 학생 선택 ------------------------------ */}
@@ -91,7 +95,9 @@ export default function AdminClassPage() {
               ) : null}
               <button
                 onClick={() => setAddOpen(true)}
-                className="rounded-full bg-brand-50 px-3 py-1.5 text-[11px] font-extrabold text-brand-700 hover:bg-brand-100"
+                disabled={cloudBlocked}
+                title={cloudBlocked ? '서버에서 학생 목록을 먼저 불러와야 중복 등록을 막을 수 있어요' : undefined}
+                className="rounded-full bg-brand-50 px-3 py-1.5 text-[11px] font-extrabold text-brand-700 hover:bg-brand-100 disabled:opacity-40"
                 data-testid="student-add"
               >
                 + 새 학생
@@ -180,7 +186,11 @@ export default function AdminClassPage() {
               </div>
             </>
           ) : (
-            <p className="py-4 text-center text-sm text-slate-400">활성 학생이 없어요. ‘+ 새 학생’으로 등록해 주세요.</p>
+            <p className="py-4 text-center text-sm text-slate-400">
+              {store.lastCloudError
+                ? '학생 목록을 불러오지 못했어요. 위 안내에서 ‘다시 시도’를 눌러 주세요.'
+                : '활성 학생이 없어요. ‘+ 새 학생’으로 등록해 주세요.'}
+            </p>
           )}
         </section>
 
